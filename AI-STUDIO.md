@@ -82,22 +82,33 @@ Actual availability depends on the ChatGPT plan, workspace, product surface, per
 
 **Current Configuration Decision:**
 
-* Keep ChatGPT as the main thinking and learning agent.
+* Keep ChatGPT as the main thinking, learning, research, and AI Studio coordination agent.
+
 * Keep the current core capabilities.
-* Learn Plugins, Skills, Tools, Connected Apps, and Permissions gradually.
-* Install new Plugins only when they solve a real workflow requirement.
-* Do not create unnecessary custom Skills yet.
-* Validate workflows manually before converting them into reusable automation.
 
-**Position in HAN's AI Studio:**
+* Use an exploration-first but production-controlled approach when learning new Plugins, Skills, Tools, Agents, and Connected Apps.
 
-Think
-→ Learn
-→ Research
-→ Analyze
-→ Plan
-→ Review
-→ Coordinate
+* HAN may actively explore unfamiliar capabilities through small experiments even before a permanent use case is known.
+
+* Exploration does not automatically make a capability part of the permanent AI Studio.
+
+* Promising capabilities should be tested on real tasks before being promoted into the core system.
+
+* Avoid permanently installing, maintaining, or creating large numbers of overlapping capabilities without demonstrated value.
+
+* Validate important workflows manually before converting stable and repetitive processes into reusable automation.
+
+* Use the following lifecycle when evaluating new AI capabilities:
+
+Explore
+
+→ Prototype
+
+→ Evaluate
+
+→ Candidate
+
+→ Core / Archived
 
 ---
 
@@ -218,11 +229,24 @@ A Pull Request is not mandatory for every small personal project. Direct work on
 **Current Configuration Decision:**
 
 * Keep GitHub as a core integration.
+
 * Prioritize coding, Plan Mode, Review, Git, testing, debugging, and project access.
-* Do not install integrations without a concrete engineering requirement.
-* Do not create a complete HAN Coding Workflow Skill yet.
-* First execute the complete workflow manually several times.
-* Automate only the steps that prove repetitive and stable.
+
+* Allow unfamiliar engineering capabilities to be explored through small experiments before deciding whether they belong in the permanent Codex environment.
+
+* Keep permanent integrations and automation limited to capabilities that demonstrate practical value.
+
+* HAN should understand the principles of Git, GitHub, repository structure, branches, commits, pushes, pulls, and reviews even when Codex performs the repetitive operations.
+
+* The initial manual Git learning phase has been completed through real repository work.
+
+* Beginning after the September 2026 AI Studio update, repetitive local repository modification, testing, and Git operations should gradually transition to Codex.
+
+* HAN remains responsible for defining goals, understanding important changes, reviewing results, and approving significant repository actions.
+
+* Do not create a complete HAN Coding Workflow Skill until the real Codex-assisted workflow has been tested repeatedly.
+
+* Automate only the steps that prove repetitive, stable, and useful.
 
 **Position in HAN's AI Studio:**
 
@@ -306,6 +330,40 @@ It can be used for:
 
 For HAN's university system, Gemini Notebook can become an important knowledge layer for processing lecture and course materials.
 
+**Current HAN Experiment Status: CANDIDATE**
+
+HAN has tested Gemini Notebook with real audio input.
+
+Observed results:
+
+* Audio content could be processed and understood.
+* The notebook could generate structured learning outputs from the recording.
+* The material could be further transformed into summaries, notes, and other learning formats.
+* In one test, processing completed within several minutes.
+* A continuing loading state was observed after processing appeared complete.
+
+The continuing loading behavior should currently be treated as an observed issue rather than a confirmed product bug.
+
+For university use, the current prototype workflow is:
+
+Lecture
+
+→ Audio Capture
+
+→ Gemini Notebook
+
+→ Transcript / Understanding
+
+→ Summary / Key Points
+
+→ Study Notes
+
+→ Additional Study Material
+
+The primary objective is information preservation.
+
+Presentation quality such as slides, video, or polished notes is secondary to accurately capturing important lecture content.
+
 **Workflow Builder:**
 
 Workflow Builder is the main workflow construction environment.
@@ -340,6 +398,58 @@ Workflow Builder can support:
 * Workflow publishing
 * Workflow version management
 * Execution logs
+
+**First Gemini Workflow Experiment:**
+
+HAN successfully built and tested a first learning workflow inside Gemini Enterprise.
+
+The original workflow included:
+
+Manual Trigger
+
+→ Learning Material Analyzer
+
+→ Learning Content Designer
+
+→ Assessment Planner
+
+→ Assessment Designer
+
+→ Answer & Solution Builder
+
+A lighter version was later tested using:
+
+Learning Material Analyzer
+
+→ Learning Content Designer
+
+During this experiment, HAN learned and used:
+
+* Manual Trigger
+* Input and Output configuration
+* Variables
+* Agent chaining
+* Agent instructions
+* Workflow testing
+* Reset and Run
+* Debugging
+* Required-input validation
+
+One observed error was:
+
+"workflow failed due to missing required input"
+
+The error occurred because the Manual Trigger did not provide the required Learning Material property in the expected format.
+
+The workflow was successfully debugged and tested.
+
+**Current Status: ARCHIVED — Successful Learning Prototype**
+
+The workflow was not abandoned because it failed.
+
+It was archived because the configuration and maintenance effort was too high compared with simpler alternatives for HAN's real university learning workflow.
+
+Gemini Notebook later proved to be a lower-friction option for processing learning materials and lecture recordings.
 
 **Agents:**
 
@@ -400,7 +510,139 @@ In HAN's currently observed Rakyat Digital Gemini Enterprise environment:
 
 Therefore, these integrations should be treated as platform capabilities rather than confirmed current-account capabilities until tested.
 
+**Gemini Enterprise Workspace Structure:**
+
+HAN currently uses several Gemini Enterprise conversation spaces with different purposes.
+
+**Persistent / Long-term Spaces:**
+
+* Personal AI Context and Goals
+* Skills Blueprint
+* New Agent Blueprint
+
+These spaces are intended to preserve long-term context, design history, and reusable system knowledge.
+
+**Temporary / Experimental Space:**
+
+* AI Skill & Agent Clinic
+
+This space is used for temporary exploration, troubleshooting, design discussion, and experimentation. It does not need to be preserved permanently.
+
+The current principle is:
+
+Persistent Context
+
+→ Long-term system knowledge
+
+Temporary Context
+
+→ Working space / experimentation
+
 **Built-in Skills Currently Observed:**
+
+**HAN-Created Gemini Skills:**
+
+**Deep Research Experiment:**
+
+HAN tested Gemini Deep Research as a structured research workflow.
+
+A limitation observed in the current Gemini Enterprise environment is that a custom Skill and Deep Research may not always be directly activated together in the same run.
+
+To work around this, HAN used the following method:
+
+Skill Methodology
+
+→ Extract important constraints and evaluation criteria
+
+→ Convert them into Prompt Instructions
+
+→ Deep Research
+
+→ Research Plan
+
+→ HAN Review
+
+→ Research Execution
+
+This means the Skill itself is not directly controlling Deep Research.
+
+Instead, the Skill's methodology is manually transferred into the prompt and context used by Deep Research.
+
+This approach allows reusable Skill logic to influence research without requiring direct Skill + Deep Research execution.
+
+**Current Status: TESTING**
+
+The method should continue to be evaluated for:
+
+* Constraint preservation
+* Research drift
+* Technical accuracy
+* Practical usefulness
+* Suitability for Electronic Engineering Technology research
+
+**Human-in-the-loop Experiment:**
+
+HAN has now used Human-in-the-loop in a real research workflow.
+
+The tested pattern is:
+
+AI Planning
+
+→ Research Plan
+
+→ Human Review
+
+→ Approve / Modify
+
+→ AI Execution
+
+This establishes an important AI Studio principle:
+
+AI agents may perform planning and execution, but significant actions should include human review when judgment, accuracy, cost, permissions, or long-term consequences matter.
+
+Human-in-the-loop should not be added to every workflow unnecessarily.
+
+It is most useful at important decision boundaries.
+
+HAN has created two custom Skills for real experimentation.
+
+### EET Hardware Auditor
+
+Purpose:
+
+Support Electronic Engineering Technology hardware-related research and evaluation.
+
+Potential responsibilities include:
+
+* Component parameter review
+* Hardware suitability analysis
+* Compatibility checks
+* PCB and hardware design risk identification
+* Component purchasing judgment
+* Engineering-focused technical research
+
+**Current Status: CANDIDATE**
+
+---
+
+### Academic Assistant
+
+Purpose:
+
+Support university academic work related to Electronic Engineering Technology.
+
+Potential responsibilities include:
+
+* Assignment structure
+* Lab report support
+* Error analysis
+* Academic formatting
+* Writing organization
+* Academic convention checking
+
+**Current Status: CANDIDATE**
+
+These Skills should continue to be tested on real university tasks before being promoted into the Core system.
 
 * `brand-voice`
 * `contract-creation`
@@ -475,6 +717,127 @@ Knowledge
 
 ---
 
+## AI Studio Experiment Lifecycle
+
+HAN's AI Studio uses an exploration-first but production-controlled approach.
+
+New Tools, Skills, Plugins, Agents, Workflows, and integrations may be explored before their long-term usefulness is fully known.
+
+The purpose of exploration is to learn what a capability can actually do.
+
+The standard lifecycle is:
+
+Explore
+
+→ Prototype
+
+→ Evaluate
+
+→ Candidate
+
+→ Core / Archived
+
+### Explore
+
+HAN discovers or intentionally tests an unfamiliar capability.
+
+The goal is learning, not immediate adoption.
+
+### Prototype
+
+A small practical experiment is created.
+
+The experiment should be simple enough to reveal the capability's real behavior.
+
+### Evaluate
+
+The result is reviewed for usefulness, limitations, overlap, reliability, effort, and fit with HAN's goals.
+
+### Candidate
+
+The capability appears useful but still requires real-world testing.
+
+Candidate does not mean permanent adoption.
+
+### Core
+
+The capability has demonstrated repeated practical value and becomes part of the stable AI Studio.
+
+### Archived
+
+The experiment was useful for learning but is not selected for continued use.
+
+Archived does not mean failed.
+
+A successful prototype may be archived when a better or simpler alternative exists.
+
+**System Principle:**
+
+Experiment freely.
+
+Adopt selectively.
+
+Automate carefully.
+
+## Shared Knowledge Base — Research Question
+
+HAN's AI Studio currently relies heavily on HAN manually transferring important information between AI agents.
+
+Current pattern:
+
+Gemini
+
+→ HAN
+
+→ ChatGPT
+
+ChatGPT
+
+→ HAN
+
+→ Codex
+
+This works during the early learning stage because HAN remains closely involved in understanding and reviewing information.
+
+The long-term objective is to create a Shared Knowledge Base that multiple AI agents can access.
+
+Future architecture:
+
+HAN
+
+→ ChatGPT
+
+→ Gemini
+
+→ Codex
+
+↕ Shared Knowledge Base
+
+The Shared Knowledge Base should potentially support:
+
+* Long-term system knowledge
+* University notes
+* AI Studio documentation
+* Project knowledge
+* Agent context
+* Research outputs
+* Reusable instructions
+* Cross-agent information retrieval
+
+Potential technologies and platforms to evaluate later include:
+
+* Obsidian
+* GitHub
+* Google Drive
+* Databases
+* RAG systems
+* APIs
+* MCP-based access
+
+**Current Status: RESEARCH / DESIGN QUESTION**
+
+No permanent platform has been selected yet.
+
 ## Three-Agent Division of Labour
 
 The current architecture of HAN's AI Studio is:
@@ -542,3 +905,83 @@ The long-term objective is:
 
 **Right Agent → Right Task → Right Tool → Human Review**
 
+## Development Log
+
+### 2026-09-12
+
+* Tested classroom and personal audio capture methods across phone and Windows.
+
+* Evaluated Gemini Notebook using real recorded audio.
+
+* Confirmed Gemini Notebook as a promising lower-friction learning-material processing workflow.
+
+* Created the EET Hardware Auditor Skill.
+
+* Created the Academic Assistant Skill.
+
+* Tested Gemini Deep Research.
+
+* Transferred Skill constraints into Deep Research through prompt instructions.
+
+* Used Research Plan → Human Review → Execution as a practical Human-in-the-loop workflow.
+
+* Reviewed the first Gemini learning Workflow.
+
+* Confirmed that the first Workflow successfully taught Manual Trigger, Variables, Input / Output, Agent chaining, testing, and debugging.
+
+* Archived the first learning Workflow because Gemini Notebook provided a simpler workflow for the same university learning objective.
+
+* Updated the AI Studio philosophy from strict requirement-first adoption to exploration-first, production-controlled experimentation.
+
+## Current Exploration Roadmap
+
+### Obsidian
+
+Research whether Obsidian should become the human-readable Personal Knowledge Base or Knowledge Management layer of HAN's AI Studio.
+
+### Shared Knowledge Base
+
+Research how ChatGPT, Gemini, Codex, and HAN can access shared long-term knowledge without requiring constant manual information transfer.
+
+### NVIDIA
+
+Understand NVIDIA from first principles:
+
+GPU
+
+→ CUDA
+
+→ AI Computing
+
+→ RTX
+
+→ Data Center
+
+→ Jetson
+
+→ Robotics
+
+→ Developer Ecosystem
+
+Evaluate which NVIDIA capabilities are relevant to Electronic Engineering Technology, Embedded Systems, Robotics, and AI.
+
+### Agent / Skill Exploration
+
+Actively explore useful Agents, Skills, Plugins, and Tools through small experiments.
+
+The goal is to understand the ecosystem before deciding what belongs in the permanent AI Studio.
+
+### Personal AI Assistant
+
+Research the long-term possibility of an always-available personal AI capable of:
+
+* Voice interaction
+* Phone and computer control
+* Tool calling
+* App actions
+* Cross-device workflows
+* Automation
+* Knowledge access
+* Human approval for sensitive actions
+
+**Current Status: OPEN RESEARCH TOPIC**
