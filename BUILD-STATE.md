@@ -4,7 +4,7 @@
 - **Current Stage:** Stage 2 — Persistence + Workspace
 - **Stage Status:** Complete — awaiting HAN's review
 - **Latest Completed Stage:** Stage 2 — Persistence + Workspace
-- **Latest Git Commit:** `HEAD` — Complete Phase 9 Stage 2 persistence and workspace
+- **Latest Git Commit:** `HEAD` — Fix Stage 2 persistence mapping and test synchronization
 - **Working Branch:** `main`
 
 ## What Works
@@ -28,7 +28,7 @@
 
 ## Tests Status
 
-- `npm test`: passed (3 test files, 8 tests), including domain unit tests, real isolated SQLite restart integration, and UI lifecycle/failure coverage.
+- `npm test`: passed (3 test files, 9 tests) with no React `act(...)` warnings, including domain unit tests, real isolated SQLite restart/schema mapping integration, and UI lifecycle/failure coverage.
 - `npm run build`: passed (strict browser/server TypeScript checks and Vite production bundle).
 - `npm run dev`: combined local runtime and Vite server started successfully; HTTP smoke check returned 200.
 - Manual real-API restart verification passed: create, list, retrieve/open, stable-ID rename, close-equivalent return, archive, runtime restart, archived retrieval, restore, and active reopen.

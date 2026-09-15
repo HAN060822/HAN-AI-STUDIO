@@ -10,7 +10,7 @@ export type Workspace = {
   createdAt: string;
   updatedAt: string;
   archivedAt: string | null;
-  schemaVersion: typeof WORKSPACE_SCHEMA_VERSION;
+  schemaVersion: number;
 };
 
 export type CreateWorkspaceInput = {

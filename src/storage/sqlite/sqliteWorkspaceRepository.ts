@@ -25,7 +25,7 @@ function fromRow(row: WorkspaceRow): Workspace {
     createdAt: row.created_at,
     updatedAt: row.updated_at,
     archivedAt: row.archived_at,
-    schemaVersion: 1,
+    schemaVersion: row.schema_version,
   };
 }
 

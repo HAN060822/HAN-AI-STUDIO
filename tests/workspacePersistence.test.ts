@@ -9,6 +9,25 @@ const temporaryDirectories: string[] = [];
 afterEach(() => { for (const directory of temporaryDirectories.splice(0)) rmSync(directory, { recursive: true, force: true }); });
 
 describe('SQLite workspace persistence', () => {
+  it('maps the schema version stored in the database row', () => {
+    const directory = mkdtempSync(join(tmpdir(), 'han-ai-studio-schema-version-'));
+    temporaryDirectories.push(directory);
+    const repository = new SqliteWorkspaceRepository(join(directory, 'studio.sqlite'));
+    repository.create({
+      id: 'schema-version-check',
+      name: 'Schema mapping check',
+      description: null,
+      status: 'active',
+      createdAt: '2026-09-15T00:00:00.000Z',
+      updatedAt: '2026-09-15T00:00:00.000Z',
+      archivedAt: null,
+      schemaVersion: 7,
+    });
+
+    expect(repository.getById('schema-version-check')?.schemaVersion).toBe(7);
+    repository.close();
+  });
+
   it('survives repository restart, rename, archive, and restore with the same ID', () => {
     const directory = mkdtempSync(join(tmpdir(), 'han-ai-studio-workspace-'));
     temporaryDirectories.push(directory);

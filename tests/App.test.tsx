@@ -40,13 +40,14 @@ beforeEach(() => vi.stubGlobal('fetch', createWorkspaceFetch()));
 afterEach(() => vi.unstubAllGlobals());
 
 describe('AI World Lobby', () => {
-  it('renders the Home shell, navigation, and team identities', () => {
+  it('renders the Home shell, navigation, and team identities', async () => {
     render(<App />);
     expect(screen.getByRole('heading', { name: /your ai world/i })).toBeInTheDocument();
     expect(screen.getByRole('navigation', { name: /primary navigation/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /^home$/i })).toHaveAttribute('aria-current', 'page');
     expect(screen.getByRole('button', { name: /workspaces/i })).toBeDisabled();
     for (const name of ['GPT', 'Gemini', 'Codex']) expect(screen.getByRole('heading', { name })).toBeInTheDocument();
+    await screen.findByText(/your first room is waiting/i);
   });
 
   it('shows an honest intent preview notice instead of executing', async () => {
