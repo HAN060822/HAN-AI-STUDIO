@@ -25,7 +25,7 @@ The UI may call application use cases, never provider SDKs, SQLite, or Obsidian 
 
 ## Intended module growth
 
-Stage 0 creates only `src/app` and `src/core`, because the running baseline exercises them. Later stages add cohesive `application`, `agents`, `orchestrator`, `execution`, `context`, `knowledge`, `permissions`, `observability`, `adapters`, `connectors`, and `storage` modules when first used. This reserves boundaries without empty architecture scaffolding.
+Stage 1 keeps its exercised product-shell code in `src/app`. Cohesive `core`, `application`, `agents`, `orchestrator`, `execution`, `context`, `knowledge`, `permissions`, `observability`, `adapters`, `connectors`, and `storage` modules are added when first used. This reserves boundaries without empty architecture scaffolding.
 
 ## Application/data separation
 

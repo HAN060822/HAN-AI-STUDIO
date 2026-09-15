@@ -4,7 +4,7 @@ Local-first personal multi-agent AI workspace. The repository is being built ver
 
 ## Current status
 
-Phase 9 / Stage 0 establishes the repository and environment baseline. Product functionality begins in Stage 1.
+Phase 9 / Stage 1 establishes the AI World Lobby: a responsive Home shell with the AI Team, global intent preview, temporary workspace interaction, and honest empty states. Durable product systems begin in Stage 2.
 
 ## Prerequisites
 
@@ -26,7 +26,7 @@ npm run preview
 ## Repository layout
 
 - `src/app/` — web application composition and presentation
-- `src/core/` — dependency-free domain-facing code and future ports
+- `src/core/` — introduced with the first dependency-free domain-facing use case
 - `tests/` — automated tests
 - `docs/` — architecture and implementation decisions
 - `var/` — ignored local runtime data (databases, artifacts, checkpoints, logs)
@@ -35,6 +35,10 @@ npm run preview
 - `AI-STUDIO.md` — historical research record, not the current MVP specification
 
 See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for the selected stack and boundaries.
+
+## Stage 1 behavior
+
+The Home screen is a product-shell preview. Workspace creation is intentionally in-memory and resets on page reload; no database, provider, task, conversation, or execution runtime is connected. The global intent form confirms that it is an interface preview rather than processing a request.
 
 ## Environment
 
