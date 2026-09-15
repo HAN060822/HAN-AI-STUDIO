@@ -3,8 +3,11 @@ import { stat } from 'node:fs/promises';
 import { createServer, type IncomingMessage, type ServerResponse } from 'node:http';
 import { extname, join, resolve, sep } from 'node:path';
 import { URL } from 'node:url';
+import { ChatNotFoundError, ChatWorkspaceMismatchError, ConversationService, ConversationWorkspaceNotFoundError } from '../application/conversations/conversationService.ts';
 import { WorkspaceNotFoundError, WorkspaceService } from '../application/workspaces/workspaceService.ts';
+import { ConversationValidationError } from '../core/conversations/conversation.ts';
 import { WorkspaceValidationError } from '../core/workspaces/workspace.ts';
+import { SqliteConversationRepository } from '../storage/sqlite/sqliteConversationRepository.ts';
 import { SqliteWorkspaceRepository } from '../storage/sqlite/sqliteWorkspaceRepository.ts';
 
 type StudioServerOptions = {
@@ -50,6 +53,56 @@ async function readJson(request: IncomingMessage): Promise<JsonRecord> {
 
 function stringOrNull(value: unknown): string | null | undefined {
   return typeof value === 'string' || value === null ? value : undefined;
+}
+
+async function handleConversationApi(request: IncomingMessage, response: ServerResponse, service: ConversationService, url: URL): Promise<boolean> {
+  const baseMatch = url.pathname.match(/^\/api\/workspaces\/([^/]+)\/chats(?:\/([^/]+)(?:\/(messages))?)?$/);
+  if (!baseMatch) return false;
+
+  const workspaceId = decodeURIComponent(baseMatch[1]);
+  const chatId = baseMatch[2] ? decodeURIComponent(baseMatch[2]) : undefined;
+  const resource = baseMatch[3];
+
+  try {
+    if (!chatId && !resource && request.method === 'GET') {
+      sendJson(response, 200, { chats: service.listChatsForWorkspace(workspaceId) });
+      return true;
+    }
+    if (!chatId && !resource && request.method === 'POST') {
+      const body = await readJson(request);
+      sendJson(response, 201, { chat: service.createChat(workspaceId, typeof body.title === 'string' ? body.title : 'New chat') });
+      return true;
+    }
+    if (chatId && !resource && request.method === 'GET') {
+      sendJson(response, 200, { chat: service.getChat(workspaceId, chatId) });
+      return true;
+    }
+    if (chatId && !resource && request.method === 'PATCH') {
+      const body = await readJson(request);
+      if (typeof body.title !== 'string') throw new ConversationValidationError('Chat title is required.');
+      sendJson(response, 200, { chat: service.renameChat(workspaceId, chatId, body.title) });
+      return true;
+    }
+    if (chatId && resource === 'messages' && request.method === 'GET') {
+      sendJson(response, 200, { messages: service.listMessages(workspaceId, chatId) });
+      return true;
+    }
+    if (chatId && resource === 'messages' && request.method === 'POST') {
+      const body = await readJson(request);
+      if (typeof body.content !== 'string') throw new ConversationValidationError('Message content is required.');
+      sendJson(response, 201, { message: service.addHumanMessage(workspaceId, chatId, body.content) });
+      return true;
+    }
+    sendJson(response, 404, { error: 'Conversation endpoint not found.' });
+  } catch (error) {
+    if (error instanceof ConversationValidationError || error instanceof WorkspaceValidationError) sendJson(response, 400, { error: error.message });
+    else if (error instanceof ConversationWorkspaceNotFoundError || error instanceof ChatNotFoundError || error instanceof ChatWorkspaceMismatchError) sendJson(response, 404, { error: error.message });
+    else {
+      console.error('Conversation persistence request failed:', error);
+      sendJson(response, 500, { error: 'Conversation persistence is unavailable. Your change was not saved.' });
+    }
+  }
+  return true;
 }
 
 async function handleWorkspaceApi(request: IncomingMessage, response: ServerResponse, service: WorkspaceService, url: URL): Promise<boolean> {
@@ -129,14 +182,17 @@ async function serveProductionFile(request: IncomingMessage, response: ServerRes
 
 export async function startStudioServer(options: StudioServerOptions) {
   const repository = new SqliteWorkspaceRepository(options.databasePath);
-  const service = new WorkspaceService(repository);
+  const workspaceService = new WorkspaceService(repository);
+  const conversationRepository = new SqliteConversationRepository(options.databasePath);
+  const conversationService = new ConversationService(conversationRepository, repository);
   const vite = options.dev
     ? await (await import('vite')).createServer({ server: { middlewareMode: true }, appType: 'spa' })
     : null;
 
   const server = createServer(async (request, response) => {
     const url = new URL(request.url ?? '/', `http://${request.headers.host ?? 'localhost'}`);
-    if (await handleWorkspaceApi(request, response, service, url)) return;
+    if (await handleConversationApi(request, response, conversationService, url)) return;
+    if (await handleWorkspaceApi(request, response, workspaceService, url)) return;
     if (vite) {
       vite.middlewares(request, response, (error?: unknown) => {
         if (error) {
@@ -160,6 +216,7 @@ export async function startStudioServer(options: StudioServerOptions) {
       await vite?.close();
       await new Promise<void>((resolvePromise, reject) => server.close((error) => error ? reject(error) : resolvePromise()));
       repository.close();
+      conversationRepository.close();
     },
   };
 }
