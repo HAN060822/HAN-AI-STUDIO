@@ -1,4 +1,7 @@
-import { FormEvent, useState } from 'react';
+import { type FormEvent, useState } from 'react';
+import { WorkspaceSection } from './workspaces/WorkspaceSection';
+import { WorkspaceView } from './workspaces/WorkspaceView';
+import { useWorkspaces } from './workspaces/useWorkspaces';
 
 type AgentStatus = 'Standby' | 'Working' | 'Waiting';
 
@@ -23,17 +26,10 @@ function SparkMark() {
 }
 
 export function App() {
-  const [workspaceName, setWorkspaceName] = useState('');
-  const [workspaces, setWorkspaces] = useState<string[]>([]);
-  const [isWorkspaceComposerOpen, setWorkspaceComposerOpen] = useState(false);
   const [intentNotice, setIntentNotice] = useState('');
-
-  function createWorkspace(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    setWorkspaces((current) => [...current, workspaceName.trim() || 'Untitled workspace']);
-    setWorkspaceName('');
-    setWorkspaceComposerOpen(false);
-  }
+  const [openWorkspaceId, setOpenWorkspaceId] = useState<string | null>(null);
+  const workspaceController = useWorkspaces();
+  const openWorkspace = workspaceController.workspaces.find((workspace) => workspace.id === openWorkspaceId) ?? null;
 
   function showIntentNotice(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -43,11 +39,11 @@ export function App() {
   return (
     <div className="app-shell">
       <aside className="sidebar" aria-label="Application navigation">
-        <a className="brand" href="#home" aria-label="HAN's AI STUDIO home"><SparkMark /><span>HAN's<br />AI STUDIO</span></a>
+        <a className="brand" href="#home" aria-label="HAN's AI STUDIO home" onClick={() => setOpenWorkspaceId(null)}><SparkMark /><span>HAN's<br />AI STUDIO</span></a>
         <nav className="primary-nav" aria-label="Primary navigation">
           <p className="nav-label">Explore</p>
           {primaryNavigation.map((item) => (
-            <button className={`nav-item ${item === 'Home' ? 'is-current' : ''}`} type="button" key={item} aria-current={item === 'Home' ? 'page' : undefined} disabled={item !== 'Home'} title={item === 'Home' ? undefined : `${item} is coming in a later stage`}>
+            <button className={`nav-item ${item === 'Home' && !openWorkspace ? 'is-current' : ''}`} type="button" key={item} aria-current={item === 'Home' && !openWorkspace ? 'page' : undefined} disabled={item !== 'Home'} onClick={() => item === 'Home' && setOpenWorkspaceId(null)} title={item === 'Home' ? undefined : `${item} is coming in a later stage`}>
               <span className="nav-symbol" aria-hidden="true">{item === 'Home' ? '⌂' : '○'}</span>{item}{item !== 'Home' && <span className="coming-soon">Soon</span>}
             </button>
           ))}
@@ -60,7 +56,10 @@ export function App() {
         </div>
       </aside>
 
-      <main id="home" className="main-content">
+      {openWorkspace ? <main className="main-content">
+        <header className="topbar"><div className="crumb"><span className="live-dot" aria-hidden="true" /> {openWorkspace.name}</div><p className="topbar-note">A persistent place in your AI world.</p></header>
+        <div className="lobby"><WorkspaceView workspace={openWorkspace} controller={workspaceController} onClose={() => setOpenWorkspaceId(null)} /></div>
+      </main> : <main id="home" className="main-content">
         <header className="topbar"><div className="crumb"><span className="live-dot" aria-hidden="true" /> AI World Lobby</div><p className="topbar-note">A quiet place to think with your AI team.</p></header>
         <div className="lobby">
           <section className="welcome" aria-labelledby="welcome-heading">
@@ -91,15 +90,7 @@ export function App() {
           </section>
 
           <div className="content-grid">
-            <section className="section-block workspace-section" aria-labelledby="workspaces-heading">
-              <div className="section-heading"><div><p className="eyebrow">Places to make things</p><h2 id="workspaces-heading">Workspaces</h2></div><button className="text-button" type="button" onClick={() => setWorkspaceComposerOpen(true)}>+ Create workspace</button></div>
-              {isWorkspaceComposerOpen && <form className="workspace-composer" onSubmit={createWorkspace}>
-                <label htmlFor="workspace-name">Workspace name</label><div><input id="workspace-name" autoFocus value={workspaceName} onChange={(event) => setWorkspaceName(event.target.value)} placeholder="e.g. Garden project" /><button type="submit">Create</button><button type="button" className="quiet-button" onClick={() => setWorkspaceComposerOpen(false)}>Cancel</button></div>
-              </form>}
-              {workspaces.length === 0 ? <div className="empty-state"><span className="empty-mark" aria-hidden="true">⌂</span><div><h3>Your first room is waiting.</h3><p>Create a workspace to give a future project, conversation, and team a shared home.</p></div></div> : <div className="workspace-list" aria-live="polite">
-                {workspaces.map((workspace, index) => <div className="workspace-card" key={`${workspace}-${index}`}><span aria-hidden="true">✦</span><strong>{workspace}</strong><small>Temporary Stage 1 workspace · resets when this page reloads</small></div>)}
-              </div>}
-            </section>
+            <WorkspaceSection controller={workspaceController} onOpen={(workspace) => setOpenWorkspaceId(workspace.id)} />
 
             <section className="section-block attention-section" aria-labelledby="attention-heading">
               <div className="section-heading"><div><p className="eyebrow">Keep an eye here</p><h2 id="attention-heading">Attention</h2></div></div>
@@ -112,7 +103,7 @@ export function App() {
             <div className="empty-state compact-empty"><span className="empty-mark" aria-hidden="true">→</span><div><h3>Your work will find you here.</h3><p>Tasks, chats, projects, and active agent work will appear once those systems are connected.</p></div></div>
           </section>
         </div>
-      </main>
+      </main>}
     </div>
   );
 }

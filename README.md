@@ -4,7 +4,7 @@ Local-first personal multi-agent AI workspace. The repository is being built ver
 
 ## Current status
 
-Phase 9 / Stage 1 establishes the AI World Lobby: a responsive Home shell with the AI Team, global intent preview, temporary workspace interaction, and honest empty states. Durable product systems begin in Stage 2.
+Phase 9 / Stage 2 adds the first durable product domain: Workspaces now persist in local SQLite storage and support create, open, edit, close, archive, and restore lifecycle operations.
 
 ## Prerequisites
 
@@ -18,10 +18,11 @@ npm ci
 npm run dev
 npm test
 npm run build
+npm start
 npm run preview
 ```
 
-`npm run dev` starts the local development server. `npm run preview` serves the production build locally after `npm run build`.
+`npm run dev` starts the combined local API and Vite development server. `npm start` (or `npm run preview`) serves the production build and local API after `npm run build`.
 
 ## Repository layout
 
@@ -36,9 +37,11 @@ npm run preview
 
 See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for the selected stack and boundaries.
 
-## Stage 1 behavior
+## Workspace persistence
 
-The Home screen is a product-shell preview. Workspace creation is intentionally in-memory and resets on page reload; no database, provider, task, conversation, or execution runtime is connected. The global intent form confirms that it is an interface preview rather than processing a request.
+Workspaces are stored in `var/studio.sqlite` by default. Set `HAN_AI_STUDIO_DATA_DIR` to use a different local data directory. SQLite files and sidecars are ignored by Git. Workspace names do not act as identity; stable UUIDs survive rename, archive, restore, refresh, and runtime restart.
+
+No provider, conversation, task, execution, artifact, knowledge, or connector runtime is connected. The global intent form remains an honest interface preview.
 
 ## Environment
 
