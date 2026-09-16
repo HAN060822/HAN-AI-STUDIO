@@ -9,8 +9,10 @@ import { initialAgentRegistry } from '../application/agents/initialAgentRegistry
 import { OrchestratorService } from '../application/collaboration/orchestratorService.ts';
 import { ExecutionService } from '../application/executions/executionService.ts';
 import { LocalExecutionRuntime } from '../application/executions/localExecutionRuntime.ts';
+import { OutcomeError, OutcomeService } from '../application/outcomes/outcomeService.ts';
 import { ExecutionError, isExecutionAction } from '../core/executions/execution.ts';
 import { SqliteExecutionRepository } from '../storage/sqlite/sqliteExecutionRepository.ts';
+import { SqliteOutcomeRepository } from '../storage/sqlite/sqliteOutcomeRepository.ts';
 import { CollaborationValidationError } from '../core/collaboration/collaboration.ts';
 import { ChatNotFoundError, ChatWorkspaceMismatchError, ConversationService, ConversationWorkspaceNotFoundError } from '../application/conversations/conversationService.ts';
 import { initialProviderAdapterRegistry } from '../application/providers/initialProviderAdapterRegistry.ts';
@@ -19,6 +21,7 @@ import { TaskNotFoundError, TaskService, TaskSourceChatNotFoundError, TaskSource
 import { WorkspaceNotFoundError, WorkspaceService } from '../application/workspaces/workspaceService.ts';
 import { ConversationValidationError } from '../core/conversations/conversation.ts';
 import { isTaskStatus, TaskValidationError } from '../core/tasks/task.ts';
+import type { ArtifactKind } from '../core/outcomes/artifact.ts';
 import { WorkspaceValidationError } from '../core/workspaces/workspace.ts';
 import type { AgentId } from '../core/agents/agent.ts';
 import type { ProviderBinding } from '../core/providers/provider.ts';
@@ -180,6 +183,49 @@ async function handleExecutionApi(request: IncomingMessage, response: ServerResp
   return true;
 }
 
+async function handleOutcomeApi(request: IncomingMessage, response: ServerResponse, service: OutcomeService, url: URL): Promise<boolean> {
+  const match = url.pathname.match(/^\/api\/workspaces\/([^/]+)\/(artifacts|task-reports)(?:\/([^/]+))?$/);
+  if (!match) return false;
+  const workspaceId = decodeURIComponent(match[1]);
+  const resource = match[2];
+  const id = match[3] ? decodeURIComponent(match[3]) : undefined;
+  try {
+    if (resource === 'artifacts' && !id && request.method === 'GET') {
+      const taskId = url.searchParams.get('taskId') ?? undefined;
+      sendJson(response, 200, { artifacts: service.listArtifacts(workspaceId, taskId) });
+    } else if (resource === 'artifacts' && !id && request.method === 'POST') {
+      const body = await readJson(request);
+      if (body.taskId !== undefined && body.taskId !== null && typeof body.taskId !== 'string') throw new OutcomeError('invalid_input', 'Task ID must be a string or null.');
+      for (const field of ['content', 'sourceExecutionId', 'sourceContributionStepId'] as const) {
+        if (body[field] !== undefined && typeof body[field] !== 'string') throw new OutcomeError('invalid_input', `${field} must be a string.`);
+      }
+      sendJson(response, 201, { artifact: service.createArtifact(workspaceId, {
+        title: body.title as string, kind: body.kind as ArtifactKind, taskId: stringOrNull(body.taskId),
+        content: typeof body.content === 'string' ? body.content : undefined,
+        sourceExecutionId: typeof body.sourceExecutionId === 'string' ? body.sourceExecutionId : undefined,
+        sourceContributionStepId: typeof body.sourceContributionStepId === 'string' ? body.sourceContributionStepId : undefined,
+      }) });
+    } else if (resource === 'artifacts' && id && request.method === 'GET') {
+      sendJson(response, 200, { artifact: service.getArtifact(workspaceId, id) });
+    } else if (resource === 'task-reports' && !id && request.method === 'GET') {
+      sendJson(response, 200, { reports: service.listTaskReports(workspaceId) });
+    } else if (resource === 'task-reports' && !id && request.method === 'POST') {
+      const body = await readJson(request);
+      if (typeof body.taskId !== 'string') throw new OutcomeError('invalid_input', 'Task ID is required to generate a Task Report.');
+      sendJson(response, 200, { report: service.generateTaskReport(workspaceId, body.taskId) });
+    } else if (resource === 'task-reports' && id && request.method === 'GET') {
+      sendJson(response, 200, { report: service.getTaskReport(workspaceId, id) });
+    } else sendJson(response, 405, { error: 'Outcome method is not supported.', code: 'method_not_allowed' });
+  } catch (error) {
+    if (error instanceof OutcomeError) sendJson(response, error.code === 'invalid_input' ? 400 : 404, { error: error.message, code: error.code });
+    else {
+      console.error('Outcome persistence request failed:', error);
+      sendJson(response, 503, { error: 'Outcome persistence is unavailable. No Artifact or Task Report was saved.', code: 'persistence_unavailable' });
+    }
+  }
+  return true;
+}
+
 async function handleTaskApi(request: IncomingMessage, response: ServerResponse, service: TaskService, url: URL): Promise<boolean> {
   const match = url.pathname.match(/^\/api\/workspaces\/([^/]+)\/tasks(?:\/([^/]+))?$/);
   if (!match) return false;
@@ -319,6 +365,8 @@ export async function startStudioServer(options: StudioServerOptions) {
   const orchestrator = new OrchestratorService(agentInvocationService);
   const executionRepository = new SqliteExecutionRepository(options.databasePath);
   const executions = new ExecutionService(executionRepository, repository, taskRepository, new LocalExecutionRuntime(orchestrator));
+  const outcomeRepository = new SqliteOutcomeRepository(options.databasePath);
+  const outcomes = new OutcomeService(outcomeRepository, repository, taskRepository, executionRepository);
   const vite = options.dev
     ? await (await import('vite')).createServer({ server: { middlewareMode: true }, appType: 'spa' })
     : null;
@@ -327,6 +375,7 @@ export async function startStudioServer(options: StudioServerOptions) {
     const url = new URL(request.url ?? '/', `http://${request.headers.host ?? 'localhost'}`);
     if (await handleAgentApi(request, response, agentInvocationService, url)) return;
     if (await handleCollaborationApi(request, response, orchestrator, url)) return;
+    if (await handleOutcomeApi(request, response, outcomes, url)) return;
     if (await handleExecutionApi(request, response, executions, url)) return;
     if (await handleTaskApi(request, response, taskService, url)) return;
     if (await handleConversationApi(request, response, conversationService, url)) return;
@@ -360,6 +409,7 @@ export async function startStudioServer(options: StudioServerOptions) {
       conversationRepository.close();
       taskRepository.close();
       executionRepository.close();
+      outcomeRepository.close();
     },
   };
 }

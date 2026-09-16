@@ -4,7 +4,7 @@ Local-first personal multi-agent AI workspace. The repository is being built ver
 
 ## Current status
 
-Phase 9 / Stage 8 adds durable Execution attempts with safe-boundary pause/resume/cancel controls above the existing Mock-backed collaboration layer. Workspace, human Chat, and Task planning remain separate persistent domains. Stage 8 is awaiting independent review; Stage 9 has not started.
+Phase 9 / Stage 9 adds durable Artifacts and deterministic Task Reports above the sealed Execution runtime. Raw Execution contributions remain history; HAN explicitly preserves formal outcomes, and reports summarize only observable stored Task, Execution, Agent, failure, and Artifact state. Stage 9 is builder-complete and awaiting independent review.
 
 ## Prerequisites
 
@@ -41,7 +41,7 @@ See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for the selected stack and boun
 
 Workspaces are stored in `var/studio.sqlite` by default. Set `HAN_AI_STUDIO_DATA_DIR` to use a different local data directory. SQLite files and sidecars are ignored by Git. Workspace names do not act as identity; stable UUIDs survive rename, archive, restore, refresh, and runtime restart.
 
-GPT and Gemini have explicit deterministic Mock test bindings; real providers remain disconnected. Open a Workspace to use Prototype Executions. See [Stage 8 verification](docs/STAGE-8-VERIFICATION.md) for the hands-on procedure and truthful control/recovery limitations. The global intent form remains an interface preview; artifacts, knowledge, and connectors are not implemented.
+GPT and Gemini have explicit deterministic Mock test bindings; real providers remain disconnected. Open a Workspace to use Prototype Executions and preserve committed contributions as formal text Artifacts. See [Stage 9 verification](docs/STAGE-9-VERIFICATION.md) for the complete outcome loop and [Stage 8 verification](docs/STAGE-8-VERIFICATION.md) for truthful control/recovery limits. The global intent form remains an interface preview; Knowledge and connectors are not implemented.
 
 ## Environment
 

@@ -1,11 +1,11 @@
 # HAN's AI STUDIO — Build State
 
 - **Current Version:** 0.0.0
-- **Current Stage:** Stage 8 — Execution Runtime + Human Controls
+- **Current Stage:** Stage 9 — Artifact + Task Report
 - **Stage Status:** Builder complete — awaiting HAN + ChatGPT review and HAN hands-on verification
-- **Latest Completed Stage:** Stage 8 — Execution Runtime + Human Controls (builder verification complete; not sealed)
-- **Latest Git Commit:** `HEAD` — Complete Phase 9 Stage 8 execution runtime and human controls
-- **Baseline Commit:** `6af889029873d6c8067540eb7f8ea72b4974515b` — fetched, synchronized `main` / `origin/main`, clean before Stage 8
+- **Latest Completed Stage:** Stage 9 — Artifact + Task Report (builder verification complete; not sealed)
+- **Latest Git Commit:** `HEAD` — Complete Phase 9 Stage 9 artifact and task report
+- **Baseline Commit:** `92f961c090c97eb0f7a536f94302788fc610834d` — Stage 8 PASS / HANDS-ON PASS / PUSHED / SEALED; fetched, synchronized `main` / `origin/main`, clean before Stage 9
 - **Working Branch:** `main`
 
 ## What Works
@@ -39,15 +39,19 @@
 - Human Start/Pause/Resume/Cancel controls operate at real safe boundaries; in-flight controls remain visibly pending until the current call settles. Completed contributions are retained after cancellation/failure.
 - Versioned atomic SQLite checkpoints retain the immutable bounded plan, next index, in-flight marker, contribution provenance, control intent, failure and timestamps. Paused attempts resume after full restart without repeating completed steps.
 - Startup recovery marks previously Running attempts Interrupted without replaying uncertain provider calls. Home's Stage 6 and Stage 7 surfaces remain independent and functional.
+- Workspace-scoped Artifacts now persist as deliberate formal outcomes, with optional Task ownership and immutable copied Execution contribution content plus Agent/Provider/Model/backend provenance.
+- One stable current Task Report per Task is explicitly generated or regenerated from observable stored Task, Execution, failure, Agent and Artifact state; it never claims AI-authored synthesis.
+- The separate outcome UI preserves selected contributions, displays provenance, generates reports, and reconstructs both after browser reload and full server restart.
 
 ## Incomplete Work
 
-- Real provider integration, artifacts, knowledge, connectors, and later-stage Prototype 0 features (Stages 9–14).
+- Real provider integration, knowledge, connectors, and later-stage Prototype 0 features (Stages 10–14).
 - Real AI-generated Chat replies, real-provider inference, Task Agent assignment, message deletion, chat archive/delete, and cross-workspace move/copy are intentionally not implemented.
 - Parallel collaboration, intelligent planning/convergence, standalone collaboration history, and final multi-Agent Chat UX are deferred. Mock echo output proves routing/context/provenance, not intelligence or semantic agreement.
 - Collaboration goal limit is 500 characters; previous contribution handoff limit is 800 characters and truncation may omit trailing context. Standalone Stage 7 results remain transient; contributions inside Stage 8 Executions are durable.
 - No mid-provider-call suspension/abort, automatic replay, uncertain-call recovery, provider timeout, scheduler, cloud/external/physical runtime, or multi-process runtime ownership is implemented. Use one server per database.
 - Abrupt termination or a failed checkpoint write may lose an uncommitted in-flight output. Recovery preserves the last committed application checkpoint, not provider hidden state; Interrupted is terminal.
+- Artifacts are text-only and immutable in Prototype 0; edit/delete, binary/file storage, automatic preservation, report version history, intelligent synthesis, and automatic report refresh are deferred.
 
 ## Known Errors
 
@@ -55,13 +59,14 @@
 
 ## Tests Status
 
-- `npm.cmd test`: passed (19 test files, 111 tests) with no React `act(...)` warnings. Includes 38 new Execution service/state/persistence/UI/HTTP tests plus all 73 Stage 1–7 regression tests.
+- `npm.cmd test`: passed (23 test files, 122 tests) with no React `act(...)` warnings. Includes 11 new Artifact/Task Report service, persistence, migration, HTTP, restart and UI tests plus all 111 Stage 1–8 tests.
 - `npm run build`: passed (strict browser/server TypeScript checks and Vite production bundle).
 - Exact `npm.cmd run dev`: combined local runtime and Vite server started on `127.0.0.1:5173` with Mock test backend; full stop/start and browser reload passed for durable Execution state.
 - Real-browser Stage 7 smoke passed: production Agent identities/status, single-Agent invocation, Sequential GPT → Gemini, Review / Challenge with visible handoff, attributed final `MOCK · TEST OUTPUT`, usable form and result layout.
 - Workspace/Chat/human message/Task creation and Active/Closed separation passed in `Stage 7 smoke verification`. Browser refresh and full dev-server restart retained the human data; collaboration ran again after restart. Browser error/warning log was empty. Smoke data is only in ignored `var/studio.sqlite`; existing Workspaces were not modified.
 - Stage 8 real-browser smoke passed in separate `Stage 8 runtime verification`: linked Task, Create/Start, safe-boundary pause with one contribution, Resume to completion, Cancel preserving output, refresh, and Review resume after full dev-server restart. Linked Task remained Draft. Single-Agent and standalone collaboration regressions passed. Browser error/warning log was empty.
-- `git diff --check`: passed; no runtime database, secret, generated build output, or dependency change is included in the Stage 8 commit.
+- Stage 9 real-browser smoke passed in separate `Stage 9 outcome verification`: Task → completed two-Agent Execution → final contribution → formal Artifact → deterministic Task Report. Artifact/report identity, content, provenance and references survived browser reload and full dev-server restart. Browser error/warning log was empty.
+- `git diff --check`: passed; no runtime database, secret, generated build output, or dependency change is included in the Stage 9 commit.
 - Real API and 12-Task UI smoke verification passed for Workspace, Chat, Message, and Task data, including stable Task identity, active/closed classification, goal/state, and optional source Chat relation across refresh and runtime restart.
 - `npm ci`: clean lockfile install completed during Stage 0; npm audit reported 0 vulnerabilities.
 
@@ -103,6 +108,9 @@
 - Execution uses a location-neutral runtime port. Only Prototype Local Runtime is implemented, requiring one server per database. Future runtimes remain deferred; connection/capability/permission/approval/autonomy boundaries are unchanged.
 - Checkpoints preserve observable application state only. Paused work resumes from the next incomplete step. In-flight work found after restart becomes terminal Interrupted; no silent replay or speculative recovery.
 - The UI's explicit pause-after-step demo policy makes instant Mock behavior verifiable without claiming provider suspension. API requests can omit/disable this policy for uninterrupted bounded execution.
+- **EXECUTION OUTPUT ≠ ARTIFACT:** formal outcomes exist only after an explicit preserve request; terminal Execution history is never mutated.
+- Prototype 0 uses many Artifacts per Task and one stable current Task Report per Task. Report regeneration refreshes the same identity from observable records and does not fabricate version history or AI synthesis.
+- Stage 9 Migrations 5 and 6 add Artifact/Task Report snapshots and restrictive relational provenance/reference integrity without rewriting Stage 1–8 data.
 
 ## Changed Interfaces
 
@@ -122,10 +130,11 @@
 - `AgentInvocationService.assertInvokable()` shares existing resolution checks for orchestration preflight; malformed output/backend-mode validation is hardened and unconfigured bindings are excluded from target discovery.
 - Stage 8 adds execution create/list/get and explicit control routes under `/api/workspaces/:workspaceId/executions`. Invalid transitions/conflicts are JSON 409; persistence errors are JSON 503. Accepted controls are 202, not claims of completed work.
 - Stage 7 exposes `createPlan` and `contributeNext` as a narrow step seam reused by both standalone collaboration and `LocalExecutionRuntime`; no SQL/lifecycle/provider logic was moved into the Orchestrator.
+- Stage 9 adds Artifact and Task Report create/list/get routes under `/api/workspaces/:workspaceId`; outcome scope/validation remains in `OutcomeService`, SQL remains in `SqliteOutcomeRepository`.
 
 ## Uncommitted Work
 
-- None after the Stage 8 commit. No push performed; local `main` is one Stage 8 commit ahead of the synchronized Stage 7 baseline.
+- None after the Stage 9 commit. No push performed; local `main` is one Stage 9 commit ahead of the synchronized sealed Stage 8 baseline.
 
 ## Blockers
 
@@ -133,7 +142,7 @@
 
 ## Next Exact Action
 
-STOP for HAN + ChatGPT Stage 8 architecture/functional review and HAN hands-on verification using `docs/STAGE-8-VERIFICATION.md`. Do not push. Do not begin Stage 9 without explicit authorization.
+STOP for HAN + ChatGPT Stage 9 architecture/functional review and HAN hands-on verification using `docs/STAGE-9-VERIFICATION.md`. Do not push. Do not begin Stage 10 without explicit authorization.
 
 ## Relevant Architecture Documents
 
@@ -141,9 +150,10 @@ STOP for HAN + ChatGPT Stage 8 architecture/functional review and HAN hands-on v
 - `BUILD-PLAN.md` — staged implementation roadmap.
 - `AI-STUDIO.md` — historical context only.
 - `docs/STAGE-8-VERIFICATION.md` — exact human test procedure, builder evidence, safe-boundary/recovery limits and review points.
+- `docs/STAGE-9-VERIFICATION.md` — exact Artifact/Task Report closed-loop procedure, builder evidence, limits and review points.
 
 ## Stage Gate
 
-- **Current Stage:** Stage 8 — Execution Runtime + Human Controls
+- **Current Stage:** Stage 9 — Artifact + Task Report
 - **Stage Status:** Builder complete — awaiting review; not sealed
-- **Stage 9:** NOT started
+- **Stage 10:** NOT started

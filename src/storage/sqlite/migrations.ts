@@ -88,6 +88,62 @@ const migrations = [
       CREATE INDEX executions_runtime_status_idx ON executions(runtime_id, status);
     `,
   },
+  {
+    version: 5,
+    name: 'create_artifacts_and_task_reports',
+    sql: `
+      CREATE TABLE artifacts (
+        id TEXT PRIMARY KEY NOT NULL,
+        workspace_id TEXT NOT NULL,
+        task_id TEXT,
+        source_execution_id TEXT,
+        kind TEXT NOT NULL CHECK (kind IN ('document', 'result', 'note')),
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL,
+        schema_version INTEGER NOT NULL DEFAULT 1,
+        snapshot_json TEXT NOT NULL CHECK (json_valid(snapshot_json)),
+        FOREIGN KEY (workspace_id) REFERENCES workspaces(id) ON DELETE RESTRICT,
+        FOREIGN KEY (task_id) REFERENCES tasks(id) ON DELETE RESTRICT,
+        FOREIGN KEY (source_execution_id) REFERENCES executions(id) ON DELETE RESTRICT
+      );
+      CREATE INDEX artifacts_workspace_updated_idx ON artifacts(workspace_id, updated_at DESC, id ASC);
+      CREATE INDEX artifacts_task_updated_idx ON artifacts(task_id, updated_at DESC, id ASC);
+      CREATE INDEX artifacts_execution_idx ON artifacts(source_execution_id, id ASC);
+
+      CREATE TABLE task_reports (
+        id TEXT PRIMARY KEY NOT NULL,
+        workspace_id TEXT NOT NULL,
+        task_id TEXT NOT NULL UNIQUE,
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL,
+        schema_version INTEGER NOT NULL DEFAULT 1,
+        snapshot_json TEXT NOT NULL CHECK (json_valid(snapshot_json)),
+        FOREIGN KEY (workspace_id) REFERENCES workspaces(id) ON DELETE RESTRICT,
+        FOREIGN KEY (task_id) REFERENCES tasks(id) ON DELETE RESTRICT
+      );
+      CREATE INDEX task_reports_workspace_updated_idx ON task_reports(workspace_id, updated_at DESC, id ASC);
+    `,
+  },
+  {
+    version: 6,
+    name: 'create_task_report_references',
+    sql: `
+      CREATE TABLE task_report_executions (
+        report_id TEXT NOT NULL,
+        execution_id TEXT NOT NULL,
+        PRIMARY KEY (report_id, execution_id),
+        FOREIGN KEY (report_id) REFERENCES task_reports(id) ON DELETE RESTRICT,
+        FOREIGN KEY (execution_id) REFERENCES executions(id) ON DELETE RESTRICT
+      );
+      CREATE TABLE task_report_artifacts (
+        report_id TEXT NOT NULL,
+        artifact_id TEXT NOT NULL,
+        PRIMARY KEY (report_id, artifact_id),
+        FOREIGN KEY (report_id) REFERENCES task_reports(id) ON DELETE RESTRICT,
+        FOREIGN KEY (artifact_id) REFERENCES artifacts(id) ON DELETE RESTRICT
+      );
+    `,
+  },
 ] as const;
 
 export function applyMigrations(database: DatabaseSync): void {

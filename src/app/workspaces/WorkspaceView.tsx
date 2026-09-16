@@ -3,6 +3,7 @@ import { ChatView } from '../conversations/ChatView';
 import { WorkspaceChats } from '../conversations/WorkspaceChats';
 import { WorkspaceTasks } from '../tasks/WorkspaceTasks';
 import { ExecutionPanel } from '../executions/ExecutionPanel';
+import { OutcomePanel } from '../outcomes/OutcomePanel';
 import type { Workspace } from '../../core/workspaces/workspace';
 import type { WorkspaceController } from './useWorkspaces';
 
@@ -45,6 +46,7 @@ export function WorkspaceView({ workspace, controller, onClose }: WorkspaceViewP
     </header>
     <WorkspaceTasks workspaceId={workspace.id} />
     <ExecutionPanel key={workspace.id} workspaceId={workspace.id} />
+    <OutcomePanel key={`outcomes-${workspace.id}`} workspaceId={workspace.id} />
     <WorkspaceChats workspaceId={workspace.id} onOpen={(chat) => setOpenChatId(chat.id)} />
     <section aria-labelledby="workspace-rooms-heading" className="workspace-rooms"><div className="section-heading"><div><p className="eyebrow">Inside this place</p><h2 id="workspace-rooms-heading">Workspace rooms</h2></div><span className="section-note">Arriving in later stages</span></div><div>{futureRooms.map((room) => <article key={room}><span aria-hidden="true">○</span><h3>{room}</h3><p>Not connected yet</p></article>)}</div></section>
   </div>;

@@ -145,6 +145,24 @@ API: `GET/POST /api/workspaces/:workspaceId/executions`, `GET /api/workspaces/:w
 
 Authority remains unchanged: no secrets, tool access, external actions, permission/approval engine, cloud/physical runtime, recursive autonomy, Artifact/Task Report, Knowledge, telemetry, or Stage 9+ scope. See `docs/STAGE-8-VERIFICATION.md` for the exact human verification path and evidence.
 
+## Stage 9 formal outcomes
+
+**Task ≠ Execution ≠ Execution output ≠ Artifact ≠ Task Report.** Execution contributions remain immutable runtime history. An Artifact is a deliberate, persistent formal outcome owned by one Workspace, optionally associated with one same-Workspace Task, and optionally copied from one committed contribution on one same-Workspace Execution. Creating an Artifact never mutates the source Execution. A Task may own any number of Artifacts.
+
+Prototype 0 uses one current Task Report per Task. The report has stable identity and is explicitly generated or regenerated; regeneration replaces its structured observable snapshot without creating pretend report history. This cardinality gives HAN one canonical current answer to “What happened during this Task and what did it produce?” while deferring report version history. A report snapshots Task identity/goal/planning state, related Executions and statuses, planned/observed Agent identities, contribution counts and final-step identity, attributable failures, and Artifact references. Its summary is deterministic application text, never represented as AI synthesis or hidden reasoning.
+
+The application path is `OutcomePanel → workspace-scoped JSON API → OutcomeService → OutcomeRepository → SqliteOutcomeRepository`. `OutcomeService` owns normalization and all Workspace/Task/Execution/contribution scope checks. The repository owns SQL. Neither React nor the Orchestrator accesses SQLite, and provider/model identity appears only as copied provenance—not an Artifact dependency.
+
+An Artifact contains stable UUID, Workspace ID, optional Task ID, title, kind (`document`, `result`, or `note`), immutable text content, provenance, timestamps, and schema version. Contribution-backed provenance contains source Execution/step plus Agent/Provider/Model/backend mode. Direct application-service/API text Artifacts are also valid and carry null execution provenance; the initial UI intentionally focuses on preserving committed Execution contributions.
+
+Migration 5 adds `artifacts` and `task_reports` with restrictive Workspace/Task/Execution foreign keys, indexed metadata, and versioned JSON snapshots. Migration 6 additively introduces relational Task Report → Execution and Task Report → Artifact reference tables. Report snapshot and reference replacement occur in one SQLite transaction. The two numbered migrations preserve an already-applied Migration 5 during builder smoke work and never rewrite prior records. There is no delete API, cascade, or destructive migration.
+
+API: `GET/POST /api/workspaces/:workspaceId/artifacts`, `GET .../artifacts/:artifactId`, `GET/POST /api/workspaces/:workspaceId/task-reports`, and `GET .../task-reports/:reportId`. Artifact creation returns 201; deterministic report generation/regeneration returns 200. Invalid input is 400, missing/cross-scope identity is 404, and persistence failure is 503, all JSON.
+
+Workspace UI adds a distinct **Artifacts & Task Reports** panel. HAN selects a Task, chooses one committed contribution, names/types and preserves it, inspects copied content and complete provenance, then generates or regenerates the canonical report. Refresh and full runtime restart reconstruct both records. The panel does not turn output into an Artifact automatically, change Task state, edit terminal Executions, write Chat, promote Knowledge, or claim Mock intelligence.
+
+Current limits are deliberate: text content only; immutable Artifact records with no edit/delete UI; one explicitly regenerated current report rather than version history; no binary/file storage, AI synthesis, automatic outcome policy, Knowledge promotion, Obsidian connector, backup system, or Stage 10+ behavior. Existing authority remains unchanged and no credentials, provider calls, external actions, hidden reasoning, permissions, or scheduler were added. See `docs/STAGE-9-VERIFICATION.md`.
+
 ## Stage 0 decisions (historical)
 
 1. Use one TypeScript package while Prototype 0 remains a modular monolith.

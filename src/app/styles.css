@@ -79,3 +79,12 @@ button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visib
 .execution-controls { display: flex; flex-wrap: wrap; gap: .5rem; }
 .execution-panel article { margin-top: 1rem; padding: 1rem; border-left: 3px solid #8a6fd1; background: #f0ebfc; }
 .execution-panel [role="alert"] { color: #9a3544; }
+.outcome-panel { padding: 1.2rem; border: 1px solid #ddd7e9; border-radius: .8rem; background: #faf9fd; overflow-wrap: anywhere; }
+.outcome-panel > label, .outcome-panel form label { display: block; margin-top: .8rem; font-weight: 700; }
+.outcome-panel select, .outcome-panel input { width: 100%; max-width: 52rem; min-width: 0; padding: .6rem; border: 1px solid #d9d2e5; border-radius: .45rem; background: white; }
+.outcome-panel button { margin-top: .5rem; padding: .55rem .75rem; }
+.outcome-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(18rem, 1fr)); gap: 1rem; margin-top: 1rem; }
+.outcome-grid > article, .artifact-list > article { padding: 1rem; border: 1px solid #ddd7e9; border-radius: .8rem; background: #f4f1fc; }
+.artifact-list { display: grid; gap: .75rem; margin-top: 1rem; }
+.artifact-content { white-space: pre-wrap; overflow-wrap: anywhere; }
+.outcome-panel [role="alert"] { color: #9a3544; }

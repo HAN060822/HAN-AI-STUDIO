@@ -23,6 +23,8 @@ function createWorkspaceFetch(initial: Workspace[] = [], initialTasks: Task[] = 
     const url = new URL(String(input), 'http://local');
     const method = init?.method ?? 'GET';
     if (url.pathname.endsWith('/executions') && method === 'GET') return json({ executions: [] });
+    if (url.pathname.endsWith('/artifacts') && method === 'GET') return json({ artifacts: [] });
+    if (url.pathname.endsWith('/task-reports') && method === 'GET') return json({ reports: [] });
     if (url.pathname === '/api/agents/invocation-targets' && method === 'GET') return json({ targets: [{ agentId: 'agent-gpt', displayName: 'GPT', backendMode: 'mock', providerId: 'mock', modelId: 'mock-basic' }] });
     if (url.pathname === '/api/agents/agent-gpt/invoke' && method === 'POST') {
       const body = JSON.parse(String(init?.body)) as { input: string };
