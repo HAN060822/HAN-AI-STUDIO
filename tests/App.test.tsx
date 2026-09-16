@@ -4,6 +4,7 @@ import type { Chat, Message } from '../src/core/conversations/conversation';
 import type { Task } from '../src/core/tasks/task';
 import type { Workspace } from '../src/core/workspaces/workspace';
 import { App } from '../src/app/App';
+import { initialAgentRegistry } from '../src/application/agents/initialAgentRegistry';
 
 function json(body: unknown, status = 200) {
   return Promise.resolve(new Response(JSON.stringify(body), { status, headers: { 'content-type': 'application/json' } }));
@@ -115,7 +116,14 @@ describe('AI World Lobby', () => {
     expect(screen.getByRole('navigation', { name: /primary navigation/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /^home$/i })).toHaveAttribute('aria-current', 'page');
     expect(screen.getByRole('button', { name: /workspaces/i })).toBeDisabled();
-    for (const name of ['GPT', 'Gemini', 'Codex']) expect(screen.getByRole('heading', { name })).toBeInTheDocument();
+    for (const agent of initialAgentRegistry.list()) {
+      const heading = screen.getByRole('heading', { name: agent.displayName });
+      expect(heading).toBeInTheDocument();
+      expect(heading.closest('article')).toHaveAttribute('data-agent-id', agent.id);
+    }
+    expect(screen.getAllByText('Unavailable')).toHaveLength(3);
+    expect(screen.getByText(/providers not connected/i)).toBeInTheDocument();
+    expect(screen.queryByText(/thinking|researching|building|reviewing|working/i)).not.toBeInTheDocument();
     await screen.findByText(/your first room is waiting/i);
   });
 

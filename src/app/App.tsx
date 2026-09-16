@@ -1,23 +1,8 @@
 import { type FormEvent, useState } from 'react';
+import { AgentTeam } from './agents/AgentTeam';
 import { WorkspaceSection } from './workspaces/WorkspaceSection';
 import { WorkspaceView } from './workspaces/WorkspaceView';
 import { useWorkspaces } from './workspaces/useWorkspaces';
-
-type AgentStatus = 'Standby' | 'Working' | 'Waiting';
-
-type Agent = {
-  name: 'GPT' | 'Gemini' | 'Codex';
-  mark: string;
-  status: AgentStatus;
-  description: string;
-  accent: 'lavender' | 'peach' | 'blue';
-};
-
-const agents: Agent[] = [
-  { name: 'GPT', mark: '✦', status: 'Standby', description: 'Helps explore, frame, and shape ideas.', accent: 'lavender' },
-  { name: 'Gemini', mark: '◐', status: 'Working', description: 'Brings a second lens to research and synthesis.', accent: 'peach' },
-  { name: 'Codex', mark: '⌘', status: 'Waiting', description: 'Helps turn clear intent into working systems.', accent: 'blue' },
-];
 
 const primaryNavigation = ['Home', 'Workspaces', 'Projects', 'Library', 'Activity'];
 
@@ -79,15 +64,7 @@ export function App() {
             <p className="intent-disclosure" id="intent-preview-note">Intent Engine preview · It will connect to your tools and team in a later stage.</p>
           </section>
 
-          <section className="section-block team-section" aria-labelledby="team-heading">
-            <div className="section-heading"><div><p className="eyebrow">Your collaborators</p><h2 id="team-heading">AI Team</h2></div><span className="section-note">Presence is locally simulated</span></div>
-            <div className="agent-grid">
-              {agents.map((agent) => <article className={`agent-card ${agent.accent}`} key={agent.name}>
-                <div className="agent-card-top"><span className="agent-avatar" aria-hidden="true">{agent.mark}</span><span className={`status status-${agent.status.toLowerCase()}`}><span aria-hidden="true" />{agent.status}</span></div>
-                <h3>{agent.name}</h3><p>{agent.description}</p>
-              </article>)}
-            </div>
-          </section>
+          <AgentTeam />
 
           <div className="content-grid">
             <WorkspaceSection controller={workspaceController} onOpen={(workspace) => setOpenWorkspaceId(workspace.id)} />

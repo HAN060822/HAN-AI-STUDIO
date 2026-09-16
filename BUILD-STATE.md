@@ -1,10 +1,10 @@
 # HAN's AI STUDIO — Build State
 
 - **Current Version:** 0.0.0
-- **Current Stage:** Stage 4 — Task Panel + Task State
+- **Current Stage:** Stage 5 — Agent Registry + Provider Adapter Interface
 - **Stage Status:** Complete — awaiting HAN's review
-- **Latest Completed Stage:** Stage 4 — Task Panel + Task State
-- **Latest Git Commit:** `HEAD` — Refine Stage 4 task lifecycle and list UX
+- **Latest Completed Stage:** Stage 5 — Agent Registry + Provider Adapter Interface
+- **Latest Git Commit:** `HEAD` — Complete Phase 9 Stage 5 agent registry and adapter interface
 - **Working Branch:** `main`
 
 ## What Works
@@ -22,13 +22,16 @@
 - Workspace Task UI supports create, list, open, rename, goal editing, validated state transitions, leave/return, refresh, and runtime restart persistence.
 - Task collections default to compact, bounded Active views (`draft`, `discussing`, `paused`, and `blocked`); persisted Completed and Cancelled Tasks move to a separate Closed view without losing identity or history.
 - Chat UI exposes related Tasks and can create a Task linked to the current Chat while preserving the distinction between discussion and work.
+- A global, configuration-backed Agent Registry exposes the stable GPT, Gemini, and Codex AI Studio identities, machine-readable capability metadata, honest availability, and inspectable provider bindings.
+- The Home AI Team renders from the Agent Registry and reports providers as not connected; the former simulated Working/Waiting presentation is removed.
+- A Provider Adapter contract, normalized request/response types, and descriptor/adapter resolver establish the Stage 6 boundary without making provider calls.
 - Projects, Knowledge, Assets, and History remain explicit later-stage placeholders.
 - Persistence and validation failures surface without pretending a write succeeded.
 
 ## Incomplete Work
 
-- Providers, agent runtime, execution, artifacts, knowledge, connectors, and all later-stage Prototype 0 features (Stages 5–14).
-- AI-generated replies, provider/model execution, task creation, message deletion, chat archive/delete, and cross-workspace move/copy are intentionally not implemented.
+- Real/mock provider integrations, agent runtime, orchestration, execution, artifacts, knowledge, connectors, and all later-stage Prototype 0 features (Stages 6–14).
+- AI-generated replies, provider/model execution, Agent assignment, message deletion, chat archive/delete, and cross-workspace move/copy are intentionally not implemented.
 
 ## Known Errors
 
@@ -36,7 +39,7 @@
 
 ## Tests Status
 
-- `npm test`: passed (9 test files, 26 tests) with no React `act(...)` warnings, including Task active/closed classification, compact large-collection UI, Task domain lifecycle/scope tests, real SQLite Migration 3 and restart coverage, Task HTTP API isolation, UI create/edit/transition/reload, and all Stage 1–3 regressions.
+- `npm test`: passed (11 test files, 31 tests) with no React `act(...)` warnings, including stable Agent identity, registry resolution and capability queries, Provider/Model separation, descriptor-only adapters, a deterministic no-network fake, registry-backed UI, and all Stage 1–4 regressions.
 - `npm run build`: passed (strict browser/server TypeScript checks and Vite production bundle).
 - `npm run dev`: combined local runtime and Vite server started successfully; HTTP smoke check returned 200.
 - Real API and 12-Task UI smoke verification passed for Workspace, Chat, Message, and Task data, including stable Task identity, active/closed classification, goal/state, and optional source Chat relation across refresh and runtime restart.
@@ -59,6 +62,13 @@
 - **DATA RETENTION ≠ ACTIVE UI PRESENCE:** completed and cancelled Tasks remain authoritative SQLite records but are excluded from the default Active presentation and available in Closed.
 - **TASK LIST = NAVIGATION, TASK DETAIL = INFORMATION:** collection rows expose compact identity/status context; goal, lifecycle actions, and complete metadata remain in the opened Task detail.
 - Task archive and hard delete are explicitly deferred. Cancel is not delete, terminal Tasks are retained, and no destructive cascade behavior is introduced.
+- **AGENT ≠ PROVIDER ≠ MODEL:** an AI Studio Agent is persistent identity; its Provider and Model are replaceable binding metadata.
+- **PERSISTENT IDENTITY + REPLACEABLE INTELLIGENCE BACKEND:** Agent IDs remain stable when a future binding changes.
+- **CAPABILITY ≠ PERSONALITY** and **ROLE ≠ IDENTITY:** capabilities and role summaries are provisional, machine-readable participation hints, not personas or permissions.
+- **NORMALIZE COMMON, PRESERVE UNIQUE:** the adapter contract normalizes identity, availability, text request, and response fields while generic extension types leave provider-specific behavior behind adapters.
+- **NO FAKE ACTIVITY:** initial Agents and adapter descriptors are unavailable/unconfigured; Stage 5 performs no inference and presents no simulated execution state.
+- GPT, Gemini, and Codex are global application-defined Agents rather than per-Workspace SQLite rows. User-created Agents and persistent Agent configuration are deferred.
+- Capability metadata describes potential fit only. It grants no connection, permission, approval, or autonomy.
 
 ## Changed Interfaces
 
@@ -69,6 +79,8 @@
 - Stage 3 UI exposes workspace-scoped chat create/list/open/rename/back navigation and human-message create/history; it does not claim to generate an AI response.
 - Task API: `GET/POST /api/workspaces/:workspaceId/tasks` and `GET/PATCH /api/workspaces/:workspaceId/tasks/:taskId`; filtered related Tasks use `sourceChatId` on the list route.
 - Stage 4 UI exposes compact, bounded Active and Closed views for Workspace Tasks and Chat-related Tasks without adding providers, execution, progress, participants, artifacts, or logs.
+- Stage 5 application boundary exposes `AgentRegistry` plus `ProviderAdapterRegistry`; the latter resolves honest unavailable descriptors now and executable adapters only when supplied later.
+- Stage 5 changes no local HTTP endpoint. Provider SDKs, credentials, settings, model selectors, inference, and Task assignment remain absent.
 
 ## Uncommitted Work
 
@@ -80,7 +92,7 @@
 
 ## Next Exact Action
 
-HAN and architecture review Stage 4. After explicit authorization only, begin Stage 5 — Agent Registry + Adapter Interface by reading this file and `BUILD-PLAN.md`; do not start it automatically.
+HAN and architecture review Stage 5. After explicit authorization only, begin Stage 6 — Real/Mock Provider Integration by reading this file and `BUILD-PLAN.md`; do not start it automatically.
 
 ## Relevant Architecture Documents
 
@@ -90,6 +102,6 @@ HAN and architecture review Stage 4. After explicit authorization only, begin St
 
 ## Stage Gate
 
-- **Current Stage:** Stage 4 — Task Panel + Task State
+- **Current Stage:** Stage 5 — Agent Registry + Provider Adapter Interface
 - **Stage Status:** Complete
-- **Stage 5:** NOT started
+- **Stage 6:** NOT started

@@ -25,7 +25,7 @@ The UI may call application use cases, never provider SDKs, SQLite, or Obsidian 
 
 ## Intended module growth
 
-Stages 2–4 exercise `core/workspaces`, `core/conversations`, and `core/tasks`, matching application ports/services, SQLite repositories, and local server routes while keeping browser presentation and typed API clients in `src/app`. Cohesive `agents`, `orchestrator`, `execution`, `context`, `knowledge`, `permissions`, `observability`, `adapters`, and `connectors` modules are added when first used. This reserves boundaries without empty architecture scaffolding.
+Stages 2–4 exercise `core/workspaces`, `core/conversations`, and `core/tasks`, matching application ports/services, SQLite repositories, and local server routes while keeping browser presentation and typed API clients in `src/app`. Stage 5 adds `core/agents`, `core/providers`, and matching application registries because the Home UI now consumes those boundaries. Cohesive `orchestrator`, `execution`, `context`, `knowledge`, `permissions`, `observability`, and `connectors` modules are added when first used. This reserves boundaries without empty architecture scaffolding.
 
 ## Application/data separation
 
@@ -51,6 +51,18 @@ Task collection presentation derives two views from persisted status. Active con
 
 Task collections follow **TASK LIST = NAVIGATION, TASK DETAIL = INFORMATION**. Bounded, scrolling lists use compact rows for title, status, optional Chat linkage, and update time; opening a Task reveals goal, metadata, editing, and lifecycle actions. Workspace and Chat surfaces are Active-first, with terminal Tasks inspectable through their separate Closed view. Archive and destructive delete are deferred: cancellation is not deletion, and Stage 4 adds neither a fourth migration nor cascade removal.
 
+## Stage 5 Agent and Provider boundaries
+
+**AGENT ≠ PROVIDER ≠ MODEL.** An Agent is a persistent AI Studio collaborator identity. A Provider is an external capability source, and a Model is a replaceable backend exposed through that Provider. The architecture therefore preserves **PERSISTENT IDENTITY + REPLACEABLE INTELLIGENCE BACKEND**: `agent-gpt`, `agent-gemini`, and `agent-codex` remain stable independently of their inspectable `ProviderBinding` values.
+
+The initial global `AgentRegistry` is application-defined configuration rather than SQLite data. HAN cannot yet create, edit, delete, or configure Agents, so a fourth migration would add persistence without a Stage 5 use case. The Registry lists and resolves Agents and supports machine-readable capability queries. Workspaces present the global team without duplicating Agent identities per Workspace.
+
+Capabilities and role summaries are intentionally lightweight: **CAPABILITY ≠ PERSONALITY** and **ROLE ≠ IDENTITY**. They describe possible participation, not personas, connection state, permission, approval, or autonomy. All initial Agents are `unavailable`, their bindings are `unconfigured`, and the Home UI says providers are not connected. **NO FAKE ACTIVITY:** Stage 5 never labels an Agent as thinking, researching, building, reviewing, or working without a runtime state.
+
+`ProviderAdapter` defines the minimum normalized future execution seam: descriptor identity and availability, a text request tied to an Agent ID, and a response that reports Provider/Model identity and output. Generic extension types implement **NORMALIZE COMMON, PRESERVE UNIQUE** without leaking provider-specific behavior into the UI or Agent domain. `ProviderAdapterRegistry` can resolve descriptors separately from executable adapters. Stage 5 registers unavailable OpenAI, Gemini, and Codex descriptors but no executable implementation; the deterministic fake exists only in tests.
+
+No provider SDK, network request, API key, OAuth flow, server route, model selector, streaming contract, tool call, Task assignment, permission grant, or execution record is introduced. Real/mock adapter implementations and server-side secret handling are Stage 6 or later concerns.
+
 Node's built-in SQLite API was selected over an ORM or native package because Node 24 is the repository baseline, it introduces no new dependency or compilation step, and the repository interface keeps the implementation replaceable.
 
 ## Stage 0 decisions
@@ -63,3 +75,5 @@ Node's built-in SQLite API was selected over an ORM or native package because No
 6. Stage 3 keeps conversation persistence deliberately local and provider-free: no AI response is fabricated when a user sends a message.
 7. Stage 4 keeps Task lifecycle separate from Chat and future Execution; changing Task state never claims that AI work is running.
 8. Stage 4 cleanup separates retained terminal Tasks from active working views and keeps Task collections compact and bounded; Archive and Delete remain later lifecycle decisions.
+9. Stage 5 defines global Agents in versioned application configuration, not SQLite, because no user-owned Agent lifecycle exists yet.
+10. Stage 5 exposes unavailable adapter descriptors and contracts only; provider execution remains a Stage 6 concern.
