@@ -9,15 +9,15 @@ function json(body: unknown, status = 200) {
   return Promise.resolve(new Response(JSON.stringify(body), { status, headers: { 'content-type': 'application/json' } }));
 }
 
-function createWorkspaceFetch(initial: Workspace[] = []) {
+function createWorkspaceFetch(initial: Workspace[] = [], initialTasks: Task[] = []) {
   let rows = [...initial];
   let workspaceId = rows.length;
   let chatId = 0;
   let messageId = 0;
-  let taskId = 0;
+  let taskId = initialTasks.length;
   let chats: Chat[] = [];
   let messages: Message[] = [];
-  let tasks: Task[] = [];
+  let tasks: Task[] = [...initialTasks];
   return vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
     const url = new URL(String(input), 'http://local');
     const method = init?.method ?? 'GET';
@@ -233,7 +233,7 @@ describe('AI World Lobby', () => {
     fireEvent.change(screen.getByRole('textbox', { name: /workspace name/i }), { target: { value: 'Task workspace' } });
     fireEvent.click(screen.getByRole('button', { name: /^create$/i }));
     fireEvent.click(await screen.findByRole('button', { name: /^open$/i }));
-    await screen.findByText(/no tasks yet/i);
+    await screen.findByText(/no active tasks/i);
     fireEvent.click(screen.getByRole('button', { name: /new task/i }));
     fireEvent.change(screen.getByRole('textbox', { name: /^task title$/i }), { target: { value: 'Stage 4 persistence test' } });
     fireEvent.change(screen.getByRole('textbox', { name: /^goal$/i }), { target: { value: 'Verify persistent Task state.' } });
@@ -255,7 +255,7 @@ describe('AI World Lobby', () => {
 
     await screen.findByText(/start a conversation/i);
     fireEvent.click(screen.getByRole('button', { name: /new chat/i }));
-    await screen.findByText(/no task is linked to this chat/i);
+    await screen.findByText(/no active task is linked to this chat/i);
     fireEvent.click(screen.getByRole('button', { name: /task from chat/i }));
     fireEvent.change(screen.getByRole('textbox', { name: /^task title$/i }), { target: { value: 'Chat-related Task' } });
     fireEvent.change(screen.getByRole('textbox', { name: /^goal$/i }), { target: { value: 'Keep discussion and work distinct.' } });
@@ -269,8 +269,41 @@ describe('AI World Lobby', () => {
     render(<App />);
     fireEvent.click(await screen.findByRole('button', { name: /^open$/i }));
     expect(await screen.findByRole('heading', { name: 'Persistent Task renamed', level: 3 })).toBeInTheDocument();
-    fireEvent.click(screen.getAllByRole('button', { name: /open task/i })[1]);
+    fireEvent.click(screen.getAllByRole('button', { name: /^open$/i })[1]);
     expect(await screen.findByText('Updated durable goal.')).toBeInTheDocument();
     expect(screen.getByText('Discussing', { selector: 'dd' })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: /^completed$/i }));
+    expect(await screen.findByRole('heading', { name: /tasks · 1 active/i })).toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: 'Persistent Task renamed' })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: /closed 1/i }));
+    expect(await screen.findByRole('heading', { name: 'Persistent Task renamed', level: 3 })).toBeInTheDocument();
+    expect(screen.getByText('completed')).toBeInTheDocument();
+  });
+
+  it('separates a large compact Task collection into bounded Active and Closed views across refresh', async () => {
+    const workspace: Workspace = { id: 'workspace-scale', name: 'Scale workspace', description: null, status: 'active', createdAt: '2026-09-16T00:00:00.000Z', updatedAt: '2026-09-16T00:00:00.000Z', archivedAt: null, schemaVersion: 1 };
+    const statuses: Task['status'][] = ['draft', 'discussing', 'paused', 'blocked', 'draft', 'discussing', 'paused', 'blocked', 'draft', 'discussing', 'completed', 'cancelled'];
+    const seededTasks: Task[] = statuses.map((status, index) => ({ id: `seed-task-${String(index).padStart(2, '0')}`, workspaceId: workspace.id, sourceChatId: null, title: `${status} Task ${index + 1}`, goal: `Detailed goal ${index + 1} belongs in the Task detail view.`, status, createdAt: `2026-09-16T00:${String(index).padStart(2, '0')}:00.000Z`, updatedAt: `2026-09-16T00:${String(index).padStart(2, '0')}:00.000Z`, completedAt: status === 'completed' ? '2026-09-16T01:00:00.000Z' : null, schemaVersion: 1 }));
+    const persistentFetch = createWorkspaceFetch([workspace], seededTasks);
+    vi.stubGlobal('fetch', persistentFetch);
+    const firstRender = render(<App />);
+    fireEvent.click(await screen.findByRole('button', { name: /^open$/i }));
+    expect(await screen.findByRole('heading', { name: /tasks · 10 active/i })).toBeInTheDocument();
+    const activeList = screen.getByLabelText('Active Tasks');
+    expect(within(activeList).getAllByRole('article')).toHaveLength(10);
+    expect(within(activeList).queryByText(/Detailed goal/)).not.toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: 'completed Task 11' })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: /closed 2/i }));
+    const closedList = await screen.findByLabelText('Closed Tasks');
+    expect(within(closedList).getByRole('heading', { name: 'completed Task 11' })).toBeInTheDocument();
+    expect(within(closedList).getByRole('heading', { name: 'cancelled Task 12' })).toBeInTheDocument();
+    expect(within(closedList).getAllByRole('article')).toHaveLength(2);
+
+    firstRender.unmount();
+    render(<App />);
+    fireEvent.click(await screen.findByRole('button', { name: /^open$/i }));
+    expect(await screen.findByRole('heading', { name: /tasks · 10 active/i })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: /closed 2/i }));
+    expect(await screen.findByRole('heading', { name: 'cancelled Task 12' })).toBeInTheDocument();
   });
 });

@@ -1,8 +1,8 @@
 import { type FormEvent, useEffect, useState } from 'react';
-import { allowedTaskTransitions, type TaskStatus } from '../../core/tasks/task';
+import { allowedTaskTransitions, type Task, type TaskStatus } from '../../core/tasks/task';
 import { useTask } from './useTasks';
 
-type TaskPanelProps = { workspaceId: string; taskId: string; onClose: () => void; onChanged?: () => void; compact?: boolean };
+type TaskPanelProps = { workspaceId: string; taskId: string; onClose: () => void; onChanged?: (task: Task) => void; compact?: boolean };
 const statusLabel: Record<TaskStatus, string> = { draft: 'Draft', discussing: 'Discussing', paused: 'Paused', blocked: 'Blocked', completed: 'Completed', cancelled: 'Cancelled' };
 
 export function TaskPanel({ workspaceId, taskId, onClose, onChanged, compact = false }: TaskPanelProps) {
@@ -15,12 +15,12 @@ export function TaskPanel({ workspaceId, taskId, onClose, onChanged, compact = f
   async function save(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const updated = await controller.update({ title, goal });
-    if (updated) { setEditing(false); onChanged?.(); }
+    if (updated) { setEditing(false); onChanged?.(updated); }
   }
 
   async function transition(status: TaskStatus) {
     const updated = await controller.update({ status });
-    if (updated) onChanged?.();
+    if (updated) onChanged?.(updated);
   }
 
   if (controller.loading) return <p className="loading-state" role="status">Opening Task…</p>;

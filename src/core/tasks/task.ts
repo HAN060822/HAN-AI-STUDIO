@@ -51,6 +51,10 @@ const transitions: Record<TaskStatus, readonly TaskStatus[]> = {
 
 export function allowedTaskTransitions(status: TaskStatus): readonly TaskStatus[] { return transitions[status]; }
 
+export function isClosedTaskStatus(status: TaskStatus): boolean {
+  return status === 'completed' || status === 'cancelled';
+}
+
 export function assertTaskTransition(from: TaskStatus, to: TaskStatus): void {
   if (from === to || !transitions[from].includes(to)) throw new InvalidTaskTransitionError(from, to);
 }

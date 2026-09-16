@@ -47,6 +47,10 @@ Migration 3 transactionally adds `tasks`, its Workspace/update index, and source
 
 Stage 4 uses the honest pre-execution states `draft`, `discussing`, `paused`, `blocked`, `completed`, and `cancelled`. Valid transitions are defined in the Task domain. Completed and Cancelled are terminal. These states represent planning and human-maintained Task state only: Task is not Execution, and Stage 4 creates no execution records, runtime activity, progress, participants, or logs.
 
+Task collection presentation derives two views from persisted status. Active contains `draft`, `discussing`, `paused`, and `blocked`; Closed contains `completed` and `cancelled`. This is a presentation boundary, not a storage lifecycle: **DATA RETENTION ≠ ACTIVE UI PRESENCE**. Completion and cancellation retain the Task ID, Workspace and source-Chat relationships, content, status, and timestamps in SQLite. Refresh and runtime restart reproduce the same classification from those persisted records.
+
+Task collections follow **TASK LIST = NAVIGATION, TASK DETAIL = INFORMATION**. Bounded, scrolling lists use compact rows for title, status, optional Chat linkage, and update time; opening a Task reveals goal, metadata, editing, and lifecycle actions. Workspace and Chat surfaces are Active-first, with terminal Tasks inspectable through their separate Closed view. Archive and destructive delete are deferred: cancellation is not deletion, and Stage 4 adds neither a fourth migration nor cascade removal.
+
 Node's built-in SQLite API was selected over an ORM or native package because Node 24 is the repository baseline, it introduces no new dependency or compilation step, and the repository interface keeps the implementation replaceable.
 
 ## Stage 0 decisions
@@ -58,3 +62,4 @@ Node's built-in SQLite API was selected over an ORM or native package because No
 5. Add dependencies and modules only when a vertical stage exercises them.
 6. Stage 3 keeps conversation persistence deliberately local and provider-free: no AI response is fabricated when a user sends a message.
 7. Stage 4 keeps Task lifecycle separate from Chat and future Execution; changing Task state never claims that AI work is running.
+8. Stage 4 cleanup separates retained terminal Tasks from active working views and keeps Task collections compact and bounded; Archive and Delete remain later lifecycle decisions.

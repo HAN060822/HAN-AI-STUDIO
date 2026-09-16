@@ -4,7 +4,7 @@ import type { TaskRepository } from '../src/application/tasks/taskRepository.ts'
 import { TaskService, TaskSourceChatWorkspaceMismatchError, TaskWorkspaceMismatchError } from '../src/application/tasks/taskService.ts';
 import type { WorkspaceRepository } from '../src/application/workspaces/workspaceRepository.ts';
 import type { Chat, Message } from '../src/core/conversations/conversation.ts';
-import { InvalidTaskTransitionError, type Task } from '../src/core/tasks/task.ts';
+import { InvalidTaskTransitionError, isClosedTaskStatus, type Task } from '../src/core/tasks/task.ts';
 import type { Workspace } from '../src/core/workspaces/workspace.ts';
 
 class Workspaces implements WorkspaceRepository {
@@ -34,6 +34,11 @@ const workspace = (id: string): Workspace => ({ id, name: id, description: null,
 const chat = (id: string, workspaceId: string): Chat => ({ id, workspaceId, title: id, status: 'active', createdAt: '2026-09-16T00:00:00.000Z', updatedAt: '2026-09-16T00:00:00.000Z', schemaVersion: 1 });
 
 describe('Task domain service', () => {
+  it('classifies only completed and cancelled Tasks as closed', () => {
+    expect(['draft', 'discussing', 'paused', 'blocked'].every((status) => !isClosedTaskStatus(status as Task['status']))).toBe(true);
+    expect(['completed', 'cancelled'].every((status) => isClosedTaskStatus(status as Task['status']))).toBe(true);
+  });
+
   it('creates and updates a stable workspace Task with an optional same-workspace source Chat', () => {
     const workspaces = new Workspaces(new Map([['workspace-a', workspace('workspace-a')]]));
     const conversations = new Conversations(new Map([['chat-a', chat('chat-a', 'workspace-a')]]));

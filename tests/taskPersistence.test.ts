@@ -31,15 +31,23 @@ describe('SQLite Task persistence', () => {
     const conversations = new SqliteConversationRepository(path);
     conversations.createChat({ id: 'chat-a', workspaceId: workspace.id, title: 'Source', status: 'active', createdAt: workspace.createdAt, updatedAt: workspace.updatedAt, schemaVersion: 1 });
     const tasks = new SqliteTaskRepository(path);
-    const service = new TaskService(tasks, workspaces, conversations, { createId: () => 'stable-task', now: () => new Date('2026-09-16T02:00:00.000Z') });
+    let id = 0;
+    const service = new TaskService(tasks, workspaces, conversations, { createId: () => `stable-task-${++id}`, now: () => new Date('2026-09-16T02:00:00.000Z') });
     const created = service.createTask(workspace.id, { title: 'Persistent Task', goal: 'Remain durable', sourceChatId: 'chat-a' });
     service.updateTask(workspace.id, created.id, { status: 'discussing' });
+    const completed = service.createTask(workspace.id, { title: 'Completed history', goal: 'Retain completed work', sourceChatId: 'chat-a' });
+    service.updateTask(workspace.id, completed.id, { status: 'completed' });
+    const cancelled = service.createTask(workspace.id, { title: 'Cancelled history', goal: 'Retain abandoned work', sourceChatId: 'chat-a' });
+    service.updateTask(workspace.id, cancelled.id, { status: 'cancelled' });
     tasks.close(); conversations.close(); workspaces.close();
     const reopenedWorkspaces = new SqliteWorkspaceRepository(path);
     const reopenedConversations = new SqliteConversationRepository(path);
     const reopenedTasks = new SqliteTaskRepository(path);
-    const reopened = new TaskService(reopenedTasks, reopenedWorkspaces, reopenedConversations).getTask(workspace.id, created.id);
-    expect(reopened).toMatchObject({ id: 'stable-task', title: 'Persistent Task', goal: 'Remain durable', status: 'discussing', workspaceId: workspace.id, sourceChatId: 'chat-a' });
+    const reopenedService = new TaskService(reopenedTasks, reopenedWorkspaces, reopenedConversations);
+    const reopened = reopenedService.getTask(workspace.id, created.id);
+    expect(reopened).toMatchObject({ id: 'stable-task-1', title: 'Persistent Task', goal: 'Remain durable', status: 'discussing', workspaceId: workspace.id, sourceChatId: 'chat-a' });
+    expect(reopenedService.getTask(workspace.id, completed.id)).toMatchObject({ id: completed.id, title: 'Completed history', goal: 'Retain completed work', status: 'completed', workspaceId: workspace.id, sourceChatId: 'chat-a', completedAt: '2026-09-16T02:00:00.000Z' });
+    expect(reopenedService.getTask(workspace.id, cancelled.id)).toMatchObject({ id: cancelled.id, title: 'Cancelled history', goal: 'Retain abandoned work', status: 'cancelled', workspaceId: workspace.id, sourceChatId: 'chat-a' });
     reopenedTasks.close(); reopenedConversations.close(); reopenedWorkspaces.close();
   });
 
