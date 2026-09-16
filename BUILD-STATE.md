@@ -1,11 +1,11 @@
 # HAN's AI STUDIO — Build State
 
 - **Current Version:** 0.0.0
-- **Current Stage:** Stage 7 — Orchestrator + Collaboration
+- **Current Stage:** Stage 8 — Execution Runtime + Human Controls
 - **Stage Status:** Builder complete — awaiting HAN + ChatGPT review and HAN hands-on verification
-- **Latest Completed Stage:** Stage 7 — Orchestrator + Collaboration (builder verification complete; not sealed)
-- **Latest Git Commit:** `HEAD` — Complete Phase 9 Stage 7 orchestrator and collaboration
-- **Baseline Commit:** `4fad012628d68a00f213e3b708144c45d9f6ee16` — synchronized `main` / `origin/main`, clean before Stage 7
+- **Latest Completed Stage:** Stage 8 — Execution Runtime + Human Controls (builder verification complete; not sealed)
+- **Latest Git Commit:** `HEAD` — Complete Phase 9 Stage 8 execution runtime and human controls
+- **Baseline Commit:** `6af889029873d6c8067540eb7f8ea72b4974515b` — fetched, synchronized `main` / `origin/main`, clean before Stage 8
 - **Working Branch:** `main`
 
 ## What Works
@@ -34,13 +34,20 @@
 - Sequential collaboration supports one to three distinct selected Agents; Review / Challenge supports a primary contributor and one explicit reviewer. The normal Prototype config exposes GPT and Gemini, not Codex, as Mock test participants.
 - Structured handoffs carry source/target identity, original goal, an at-most-800-character prior-contribution excerpt with truncation metadata, and the next action; they never automatically access Chat history.
 - Home's dedicated Prototype Collaboration surface displays ordered, attributed contributions and final output with clear Mock/test labels. Honest preflight/step failures preserve earlier contributions without substitution or fallback.
+- Workspace-scoped Executions now persist as distinct runtime attempts, optionally linked to a same-Workspace Task without changing Task planning state.
+- A validated lifecycle supports Created, Running, Paused, Cancelled, Interrupted, Failed and Completed, with terminal states closed to further work.
+- Human Start/Pause/Resume/Cancel controls operate at real safe boundaries; in-flight controls remain visibly pending until the current call settles. Completed contributions are retained after cancellation/failure.
+- Versioned atomic SQLite checkpoints retain the immutable bounded plan, next index, in-flight marker, contribution provenance, control intent, failure and timestamps. Paused attempts resume after full restart without repeating completed steps.
+- Startup recovery marks previously Running attempts Interrupted without replaying uncertain provider calls. Home's Stage 6 and Stage 7 surfaces remain independent and functional.
 
 ## Incomplete Work
 
-- Real provider integration, execution runtime, artifacts, knowledge, connectors, and later-stage Prototype 0 features (Stages 8–14).
+- Real provider integration, artifacts, knowledge, connectors, and later-stage Prototype 0 features (Stages 9–14).
 - Real AI-generated Chat replies, real-provider inference, Task Agent assignment, message deletion, chat archive/delete, and cross-workspace move/copy are intentionally not implemented.
-- Parallel collaboration, intelligent planning/convergence, durable collaboration history, and final multi-Agent Chat UX are deferred. Mock echo output proves routing/context/provenance, not intelligence or semantic agreement.
-- Collaboration goal limit is 500 characters; previous contribution handoff limit is 800 characters and truncation may omit trailing context. Results are transient and disappear on refresh or Home unmount.
+- Parallel collaboration, intelligent planning/convergence, standalone collaboration history, and final multi-Agent Chat UX are deferred. Mock echo output proves routing/context/provenance, not intelligence or semantic agreement.
+- Collaboration goal limit is 500 characters; previous contribution handoff limit is 800 characters and truncation may omit trailing context. Standalone Stage 7 results remain transient; contributions inside Stage 8 Executions are durable.
+- No mid-provider-call suspension/abort, automatic replay, uncertain-call recovery, provider timeout, scheduler, cloud/external/physical runtime, or multi-process runtime ownership is implemented. Use one server per database.
+- Abrupt termination or a failed checkpoint write may lose an uncommitted in-flight output. Recovery preserves the last committed application checkpoint, not provider hidden state; Interrupted is terminal.
 
 ## Known Errors
 
@@ -48,12 +55,13 @@
 
 ## Tests Status
 
-- `npm.cmd test`: passed (15 test files, 73 tests) with no React `act(...)` warnings. Includes 37 new deterministic orchestration/UI/HTTP cases plus all 36 existing Stage 1–6 regression tests.
+- `npm.cmd test`: passed (19 test files, 111 tests) with no React `act(...)` warnings. Includes 38 new Execution service/state/persistence/UI/HTTP tests plus all 73 Stage 1–7 regression tests.
 - `npm run build`: passed (strict browser/server TypeScript checks and Vite production bundle).
-- Exact `npm.cmd run dev`: combined local runtime and Vite server started on `127.0.0.1:5173` with Mock test backend. A pre-existing old watcher initially occupied the port; it was identified and stopped before testing the current startup path.
+- Exact `npm.cmd run dev`: combined local runtime and Vite server started on `127.0.0.1:5173` with Mock test backend; full stop/start and browser reload passed for durable Execution state.
 - Real-browser Stage 7 smoke passed: production Agent identities/status, single-Agent invocation, Sequential GPT → Gemini, Review / Challenge with visible handoff, attributed final `MOCK · TEST OUTPUT`, usable form and result layout.
 - Workspace/Chat/human message/Task creation and Active/Closed separation passed in `Stage 7 smoke verification`. Browser refresh and full dev-server restart retained the human data; collaboration ran again after restart. Browser error/warning log was empty. Smoke data is only in ignored `var/studio.sqlite`; existing Workspaces were not modified.
-- `git diff --check`: passed; no runtime database, secret, generated build output, or dependency change is included in the Stage 7 commit.
+- Stage 8 real-browser smoke passed in separate `Stage 8 runtime verification`: linked Task, Create/Start, safe-boundary pause with one contribution, Resume to completion, Cancel preserving output, refresh, and Review resume after full dev-server restart. Linked Task remained Draft. Single-Agent and standalone collaboration regressions passed. Browser error/warning log was empty.
+- `git diff --check`: passed; no runtime database, secret, generated build output, or dependency change is included in the Stage 8 commit.
 - Real API and 12-Task UI smoke verification passed for Workspace, Chat, Message, and Task data, including stable Task identity, active/closed classification, goal/state, and optional source Chat relation across refresh and runtime restart.
 - `npm ci`: clean lockfile install completed during Stage 0; npm audit reported 0 vulnerabilities.
 
@@ -89,9 +97,12 @@
 - **MINIMUM SUFFICIENT COLLABORATION:** only explicit participants run once, in order; one-Agent and multi-Agent plans share the same abstraction.
 - **HANDOFF ≠ CONTEXT DUMP:** bounded immediate contribution context, no Chat transcript import or hidden reasoning trace.
 - **SHOW CONTRIBUTIONS; HIDE COORDINATION NOISE:** identity/backend provenance and final ownership are visible; handoff details are optional disclosure.
-- **CollaborationPlan ≠ Workflow; Task ≠ Collaboration ≠ Execution.** Structural convergence only; no Execution Runtime, workflow engine, autonomous loops, or new authority.
-- **Mock collaboration ≠ real provider connectivity.** Chat and Task schemas/services stay unchanged. Collaboration is transient; **No Migration 4**.
-- The explicit Stage 7 handoff supersedes the broader older `BUILD-PLAN.md` wording about Task context, persisted decisions, and progress; those are not implemented here. Stage 8 may wrap orchestration later, only with explicit authorization.
+- **CollaborationPlan ≠ Workflow; Task ≠ Collaboration ≠ Execution.** Structural convergence only; Stage 8 now wraps collaboration with a bounded Execution lifecycle, not a Workflow Engine or autonomous loop.
+- **Mock collaboration ≠ real provider connectivity.** Chat and Task schemas/services stay unchanged. Stage 7 added no migration; Stage 8 adds non-destructive Migration 4 for Execution snapshots only.
+- **CANCEL EXECUTION, PRESERVE USEFUL WORK; FAILURE SHOULD INTERRUPT WORK, NOT ERASE WORK.** Pending controls and returned contributions are reconciled at safe boundaries and saved atomically using optimistic revisions.
+- Execution uses a location-neutral runtime port. Only Prototype Local Runtime is implemented, requiring one server per database. Future runtimes remain deferred; connection/capability/permission/approval/autonomy boundaries are unchanged.
+- Checkpoints preserve observable application state only. Paused work resumes from the next incomplete step. In-flight work found after restart becomes terminal Interrupted; no silent replay or speculative recovery.
+- The UI's explicit pause-after-step demo policy makes instant Mock behavior verifiable without claiming provider suspension. API requests can omit/disable this policy for uninterrupted bounded execution.
 
 ## Changed Interfaces
 
@@ -109,10 +120,12 @@
 - No real adapter was implemented because no provider credential/configuration exists and Stage 6 completion must not depend on network or quota. No Provider SDK dependency was added.
 - Stage 7 adds `POST /api/collaborations` with typed request/plan/handoff/result contracts; HTTP 400 is request validation, while HTTP 200 carries an explicit succeeded/failed collaboration result. No history endpoint or persistence is added.
 - `AgentInvocationService.assertInvokable()` shares existing resolution checks for orchestration preflight; malformed output/backend-mode validation is hardened and unconfigured bindings are excluded from target discovery.
+- Stage 8 adds execution create/list/get and explicit control routes under `/api/workspaces/:workspaceId/executions`. Invalid transitions/conflicts are JSON 409; persistence errors are JSON 503. Accepted controls are 202, not claims of completed work.
+- Stage 7 exposes `createPlan` and `contributeNext` as a narrow step seam reused by both standalone collaboration and `LocalExecutionRuntime`; no SQL/lifecycle/provider logic was moved into the Orchestrator.
 
 ## Uncommitted Work
 
-- None after the Stage 7 commit. No push performed; local `main` is one Stage 7 commit ahead of the sealed Stage 6 baseline.
+- None after the Stage 8 commit. No push performed; local `main` is one Stage 8 commit ahead of the synchronized Stage 7 baseline.
 
 ## Blockers
 
@@ -120,16 +133,17 @@
 
 ## Next Exact Action
 
-STOP for HAN + ChatGPT Stage 7 architecture/functional review and HAN hands-on verification. Do not push. Do not begin Stage 8 without explicit authorization.
+STOP for HAN + ChatGPT Stage 8 architecture/functional review and HAN hands-on verification using `docs/STAGE-8-VERIFICATION.md`. Do not push. Do not begin Stage 9 without explicit authorization.
 
 ## Relevant Architecture Documents
 
 - `docs/ARCHITECTURE.md` — authoritative Prototype 0 stack and boundaries.
 - `BUILD-PLAN.md` — staged implementation roadmap.
 - `AI-STUDIO.md` — historical context only.
+- `docs/STAGE-8-VERIFICATION.md` — exact human test procedure, builder evidence, safe-boundary/recovery limits and review points.
 
 ## Stage Gate
 
-- **Current Stage:** Stage 7 — Orchestrator + Collaboration
+- **Current Stage:** Stage 8 — Execution Runtime + Human Controls
 - **Stage Status:** Builder complete — awaiting review; not sealed
-- **Stage 8:** NOT started
+- **Stage 9:** NOT started

@@ -7,6 +7,10 @@ import { MockProviderAdapter, MOCK_MODEL_ID } from '../adapters/mock/mockProvide
 import { AgentInvocationError, AgentInvocationService } from '../application/agents/agentInvocationService.ts';
 import { initialAgentRegistry } from '../application/agents/initialAgentRegistry.ts';
 import { OrchestratorService } from '../application/collaboration/orchestratorService.ts';
+import { ExecutionService } from '../application/executions/executionService.ts';
+import { LocalExecutionRuntime } from '../application/executions/localExecutionRuntime.ts';
+import { ExecutionError, isExecutionAction } from '../core/executions/execution.ts';
+import { SqliteExecutionRepository } from '../storage/sqlite/sqliteExecutionRepository.ts';
 import { CollaborationValidationError } from '../core/collaboration/collaboration.ts';
 import { ChatNotFoundError, ChatWorkspaceMismatchError, ConversationService, ConversationWorkspaceNotFoundError } from '../application/conversations/conversationService.ts';
 import { initialProviderAdapterRegistry } from '../application/providers/initialProviderAdapterRegistry.ts';
@@ -154,6 +158,28 @@ async function handleConversationApi(request: IncomingMessage, response: ServerR
   return true;
 }
 
+async function handleExecutionApi(request: IncomingMessage, response: ServerResponse, service: ExecutionService, url: URL): Promise<boolean> {
+  const match = url.pathname.match(/^\/api\/workspaces\/([^/]+)\/executions(?:\/([^/]+)(?:\/(controls))?)?$/);
+  if (!match) return false;
+  try {
+    const workspaceId = decodeURIComponent(match[1]);
+    const id = match[2] ? decodeURIComponent(match[2]) : undefined;
+    if (!id && request.method === 'GET') sendJson(response, 200, { executions: service.list(workspaceId) });
+    else if (!id && request.method === 'POST') sendJson(response, 201, { execution: service.create(workspaceId, await readJson(request)) });
+    else if (id && !match[3] && request.method === 'GET') sendJson(response, 200, { execution: service.get(workspaceId, id) });
+    else if (id && match[3] && request.method === 'POST') {
+      const body = await readJson(request);
+      if (!isExecutionAction(body.action)) throw new ExecutionError('invalid_input', 'Choose start, pause, resume, or cancel.');
+      sendJson(response, 202, { execution: service.control(workspaceId, id, body.action) });
+    } else sendJson(response, 405, { error: 'Execution method is not supported.', code: 'method_not_allowed' });
+  } catch (error) {
+    if (error instanceof ExecutionError) sendJson(response, error.code === 'not_found' ? 404 : error.code === 'invalid_input' ? 400 : error.code === 'persistence_unavailable' ? 503 : 409, { error: error.message, code: error.code });
+    else if (error instanceof CollaborationValidationError || error instanceof WorkspaceValidationError) sendJson(response, 400, { error: error.message, code: 'invalid_input' });
+    else sendJson(response, 503, { error: 'Execution persistence is unavailable. No successful control is claimed.', code: 'persistence_unavailable' });
+  }
+  return true;
+}
+
 async function handleTaskApi(request: IncomingMessage, response: ServerResponse, service: TaskService, url: URL): Promise<boolean> {
   const match = url.pathname.match(/^\/api\/workspaces\/([^/]+)\/tasks(?:\/([^/]+))?$/);
   if (!match) return false;
@@ -291,6 +317,8 @@ export async function startStudioServer(options: StudioServerOptions) {
   }
   const agentInvocationService = new AgentInvocationService(initialAgentRegistry, new ProviderAdapterRegistry(registrations), bindings);
   const orchestrator = new OrchestratorService(agentInvocationService);
+  const executionRepository = new SqliteExecutionRepository(options.databasePath);
+  const executions = new ExecutionService(executionRepository, repository, taskRepository, new LocalExecutionRuntime(orchestrator));
   const vite = options.dev
     ? await (await import('vite')).createServer({ server: { middlewareMode: true }, appType: 'spa' })
     : null;
@@ -299,6 +327,7 @@ export async function startStudioServer(options: StudioServerOptions) {
     const url = new URL(request.url ?? '/', `http://${request.headers.host ?? 'localhost'}`);
     if (await handleAgentApi(request, response, agentInvocationService, url)) return;
     if (await handleCollaborationApi(request, response, orchestrator, url)) return;
+    if (await handleExecutionApi(request, response, executions, url)) return;
     if (await handleTaskApi(request, response, taskService, url)) return;
     if (await handleConversationApi(request, response, conversationService, url)) return;
     if (await handleWorkspaceApi(request, response, workspaceService, url)) return;
@@ -319,15 +348,18 @@ export async function startStudioServer(options: StudioServerOptions) {
     server.once('error', reject);
     server.listen(options.port ?? 5173, options.host ?? '127.0.0.1', resolvePromise);
   });
+  executions.recoverInterrupted();
 
   return {
     server,
     close: async () => {
+      await executions.close();
       await vite?.close();
       await new Promise<void>((resolvePromise, reject) => server.close((error) => error ? reject(error) : resolvePromise()));
       repository.close();
       conversationRepository.close();
       taskRepository.close();
+      executionRepository.close();
     },
   };
 }

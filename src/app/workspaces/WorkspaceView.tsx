@@ -2,6 +2,7 @@ import { type FormEvent, useEffect, useState } from 'react';
 import { ChatView } from '../conversations/ChatView';
 import { WorkspaceChats } from '../conversations/WorkspaceChats';
 import { WorkspaceTasks } from '../tasks/WorkspaceTasks';
+import { ExecutionPanel } from '../executions/ExecutionPanel';
 import type { Workspace } from '../../core/workspaces/workspace';
 import type { WorkspaceController } from './useWorkspaces';
 
@@ -43,6 +44,7 @@ export function WorkspaceView({ workspace, controller, onClose }: WorkspaceViewP
       {!editing && <div className="workspace-hero-actions"><button type="button" onClick={() => setEditing(true)}>Edit</button><button type="button" className="archive-button" onClick={async () => { const archived = await controller.archive(workspace.id); if (archived) onClose(); }}>Archive</button></div>}
     </header>
     <WorkspaceTasks workspaceId={workspace.id} />
+    <ExecutionPanel key={workspace.id} workspaceId={workspace.id} />
     <WorkspaceChats workspaceId={workspace.id} onOpen={(chat) => setOpenChatId(chat.id)} />
     <section aria-labelledby="workspace-rooms-heading" className="workspace-rooms"><div className="section-heading"><div><p className="eyebrow">Inside this place</p><h2 id="workspace-rooms-heading">Workspace rooms</h2></div><span className="section-note">Arriving in later stages</span></div><div>{futureRooms.map((room) => <article key={room}><span aria-hidden="true">○</span><h3>{room}</h3><p>Not connected yet</p></article>)}</div></section>
   </div>;

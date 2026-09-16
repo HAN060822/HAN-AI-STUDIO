@@ -68,6 +68,26 @@ const migrations = [
       CREATE INDEX tasks_source_chat_updated_idx ON tasks(source_chat_id, updated_at DESC, id ASC);
     `,
   },
+  {
+    version: 4,
+    name: 'create_executions',
+    sql: `
+      CREATE TABLE executions (
+        id TEXT PRIMARY KEY NOT NULL,
+        workspace_id TEXT NOT NULL,
+        task_id TEXT,
+        runtime_id TEXT NOT NULL,
+        status TEXT NOT NULL CHECK (status IN ('created', 'running', 'paused', 'cancelled', 'interrupted', 'failed', 'completed')),
+        updated_at TEXT NOT NULL,
+        revision INTEGER NOT NULL CHECK (revision >= 0),
+        snapshot_json TEXT NOT NULL CHECK (json_valid(snapshot_json)),
+        FOREIGN KEY (workspace_id) REFERENCES workspaces(id) ON DELETE RESTRICT,
+        FOREIGN KEY (task_id) REFERENCES tasks(id) ON DELETE RESTRICT
+      );
+      CREATE INDEX executions_workspace_updated_idx ON executions(workspace_id, updated_at DESC, id ASC);
+      CREATE INDEX executions_runtime_status_idx ON executions(runtime_id, status);
+    `,
+  },
 ] as const;
 
 export function applyMigrations(database: DatabaseSync): void {

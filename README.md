@@ -4,7 +4,7 @@ Local-first personal multi-agent AI workspace. The repository is being built ver
 
 ## Current status
 
-Phase 9 / Stage 2 adds the first durable product domain: Workspaces now persist in local SQLite storage and support create, open, edit, close, archive, and restore lifecycle operations.
+Phase 9 / Stage 8 adds durable Execution attempts with safe-boundary pause/resume/cancel controls above the existing Mock-backed collaboration layer. Workspace, human Chat, and Task planning remain separate persistent domains. Stage 8 is awaiting independent review; Stage 9 has not started.
 
 ## Prerequisites
 
@@ -41,7 +41,7 @@ See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for the selected stack and boun
 
 Workspaces are stored in `var/studio.sqlite` by default. Set `HAN_AI_STUDIO_DATA_DIR` to use a different local data directory. SQLite files and sidecars are ignored by Git. Workspace names do not act as identity; stable UUIDs survive rename, archive, restore, refresh, and runtime restart.
 
-No provider, conversation, task, execution, artifact, knowledge, or connector runtime is connected. The global intent form remains an honest interface preview.
+GPT and Gemini have explicit deterministic Mock test bindings; real providers remain disconnected. Open a Workspace to use Prototype Executions. See [Stage 8 verification](docs/STAGE-8-VERIFICATION.md) for the hands-on procedure and truthful control/recovery limitations. The global intent form remains an interface preview; artifacts, knowledge, and connectors are not implemented.
 
 ## Environment
 

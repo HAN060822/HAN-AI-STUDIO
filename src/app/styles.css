@@ -68,3 +68,14 @@ button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visib
 .collaboration-result details { margin-top: .8rem; }
 .collaboration-output { white-space: pre-wrap; overflow-wrap: anywhere; max-height: 18rem; overflow-y: auto; }
 .collaboration-panel [role="alert"] { color: #9a3544; }
+
+.execution-panel { padding: 1.2rem; border: 1px solid #ddd7e9; border-radius: .8rem; background: #faf9fd; overflow-wrap: anywhere; }
+.execution-panel fieldset { display: grid; gap: .6rem; min-width: 0; padding: 1rem; margin: 1rem 0; border: 1px solid #ddd7e9; }
+.execution-panel textarea, .execution-panel select { width: 100%; min-width: 0; padding: .6rem; background: white; border: 1px solid #d9d2e5; border-radius: .45rem; }
+.execution-panel button { padding: .55rem .75rem; justify-self: start; }
+.execution-list { display: grid; gap: .5rem; max-height: 14rem; overflow: auto; }
+.execution-list button { width: 100%; text-align: left; overflow-wrap: anywhere; }
+.execution-list button[aria-pressed="true"] { background: #ece7fa; }
+.execution-controls { display: flex; flex-wrap: wrap; gap: .5rem; }
+.execution-panel article { margin-top: 1rem; padding: 1rem; border-left: 3px solid #8a6fd1; background: #f0ebfc; }
+.execution-panel [role="alert"] { color: #9a3544; }

@@ -99,7 +99,53 @@ The same-origin `POST /api/collaborations` endpoint accepts requests, never call
 
 The Stage 7 handoff narrows the older roadmap's references to shared Task context, persisted decisions, and progress: these are deliberately deferred, not implemented under another name. Service-source changes outside `src/server` require a development-server restart under the existing scoped watcher; the browser surface is still Vite-hot-reloaded. Verification includes normal `npm.cmd run dev`, a full restart, and deterministic `mock`/`none` HTTP tests.
 
-## Stage 0 decisions
+## Stage 8 durable Execution and human control
+
+**TASK ≠ EXECUTION; EXECUTION ≠ COLLABORATION; EXECUTION ≠ AGENT RUN.** A Task remains an unchanged planning/work object. An Execution is one explicitly created attempt, Workspace-scoped and optionally linked to a same-Workspace Task. Its goal is a deliberate immutable snapshot, not a live alias to the Task goal. Multiple attempts may link to one Task. No execution transition changes Task status or writes Chat messages.
+
+The path is `ExecutionService → ExecutionRuntime → LocalExecutionRuntime → OrchestratorService.contributeNext → AgentInvocationService → Provider Adapter → Backend`. `ExecutionRuntime` is a small location-neutral port exposing an identifier, plan preparation and one next contribution. The only implementation is `prototype-local`. Execution identity/status do not encode a laptop, process, provider, or collaboration mode. Future Cloud, External Agent, and Physical runtimes are seams only, not implementations, selectors, dependencies, or permissions. No runtime migration/distributed framework is introduced.
+
+Stage 7's existing planning and per-step handoff logic was extracted into `createPlan` and `contributeNext`; the standalone `collaborate` use case still uses it and retains its original all-participant preflight, result contract, and tests. Orchestration owns no persistence, HTTP, UI, lifecycle controls, or provider implementation. The Execution runtime validates availability when each remaining step is invoked, so a later unavailable Agent fails that step while preserving earlier work. No fallback or substitution occurs.
+
+The Execution record contains UUID, Workspace/optional Task IDs, runtime ID, status, immutable plan/goal, checkpoint, pending control, safe-boundary demo option, attributable failure, created/started/updated/finished timestamps, schema version, and optimistic revision. The checkpoint contains `nextStepIndex`, `currentStepId`, and ordered successful contributions with the existing Agent/Provider/Model/mode/handoff provenance. This is reconstructable application state, not process memory, model hidden state, or chain of thought.
+
+### State machine
+
+| From | Permitted destinations |
+| --- | --- |
+| created | running, cancelled |
+| running | paused, cancelled, interrupted, failed, completed |
+| paused | running, cancelled |
+| completed / failed / cancelled / interrupted | none |
+
+Plan validation happens before creation, so a separate Preparing state is unnecessary. Start accepts only Created; Resume accepts only Paused. Duplicate starts, repeat/invalid controls and terminal-state reopening are rejected (HTTP 409), not treated as successful no-ops. All required steps must have produced a saved contribution before Completed. Terminal records have `finishedAt`; failure and cancellation never imply a successful final result.
+
+### Checkpoint and control ordering
+
+Migration 4 adds only `executions` and its Workspace/update and runtime/status indexes. Restrictive foreign keys retain referenced Workspace and optional Task records. No existing schema/record is rewritten or deleted. The service checks Task/Workspace scope. `SqliteExecutionRepository` owns SQL, stores the full versioned Execution snapshot as JSON with indexed identity/state metadata, and atomically updates lifecycle, checkpoint, contributions and pending control in one compare-and-swap statement. A stale revision is rejected. The UI and Orchestrator never access SQLite.
+
+Before a provider step starts, its in-flight intent is durably recorded. After the call settles successfully, its contribution, next index, cleared in-flight marker and resulting status are saved together. Fresh control intent is read after every awaited call so an in-flight pause/cancel is not overwritten by an old snapshot. No next step starts before that checkpoint succeeds. Persistence failure stops the driver and produces an explicit observation/control error; it cannot promise durability for an output that could not be written. The last committed checkpoint remains the recovery boundary.
+
+- **Pause:** while Running, persist `pendingControl=pause`. Status remains Running until the current call settles; the underlying model call is not suspended. At the next safe boundary, preserve its successful output and stop before the next step. If no steps remain, completion wins over a now-unnecessary pause.
+- **Resume:** continue only from a Paused, consistent checkpoint; already completed steps are not replayed. Original plan/participants/goal remain unchanged.
+- **Cancel:** Created/Paused cancel immediately without invocation. Running records a pending cancellation, preventing subsequent steps after the current call settles. Its successful output is retained, even if cancellation arrived during the final call. Cancel can supersede pending Pause. A failed call remains an attributable Failed result rather than being hidden by a pending control.
+- **Deterministic demo:** UI defaults `pauseAfterStep=true`, stopping after each successful non-final step. This is a real runtime boundary policy, not latency injection or fake provider suspension. The API defaults it to false if omitted. With two Mock Agents, Start pauses after GPT and Resume runs Gemini to completion.
+
+**CANCEL EXECUTION, PRESERVE USEFUL WORK. FAILURE SHOULD INTERRUPT WORK, NOT ERASE WORK.** Contributions survive cancellation/failure/reload. Errors identify the step and Agent with normalized safe messages. No retries, deletion, semantic convergence, or automatic alternative Agent invocation are introduced.
+
+### Recovery, observation and limitations
+
+Created and Paused attempts remain dormant across restart; only HAN's explicit Start/Resume runs them. Completed, Cancelled and Failed attempts remain inspectable and terminal. On startup, the Local Runtime marks its persisted Running records Interrupted, preserving checkpoint and uncertain step identity. It does not know whether an uncheckpointed external call finished, so it never silently retries or offers Resume for an Interrupted attempt. This intentionally favors avoiding duplicate work over speculative recovery. Safe paused checkpoints are resumable after full process restart.
+
+The Local Runtime executes bounded, explicitly requested asynchronous work within the current server process. There is no background scheduler, automatic restart continuation, durable job queue, multi-process ownership/lease protocol or 24/7 service. Use one server per database. Graceful shutdown stops at a boundary and retains work; abrupt termination can lose an in-flight result not yet checkpointed. Mid-call provider suspension/abort, provider deadlines, recovery of uncertain calls, and distributed ownership are not implemented. Current deterministic Mock completes quickly and uses no external network/credentials. Actual computation is Mock echo, not intelligence.
+
+Workspace UI adds a separate Prototype Executions panel: creation, optional Task link, goal/mode/explicit participants, history, status/progress, timestamps, provenance, final ownership, preserved failure, and supported controls. A 500ms UI observation poll runs only while a loaded record is Running; polling cannot start/resume work. Pending controls and stale observation failures are visible. Refresh updates the Task selector as well as execution history. Home and persistent Chat are not redesigned.
+
+API: `GET/POST /api/workspaces/:workspaceId/executions`, `GET /api/workspaces/:workspaceId/executions/:executionId`, and `POST .../:executionId/controls` with `{action: start|pause|resume|cancel}`. Creation returns 201; accepted controls return 202 with confirmed state (not a claim of completion). Invalid input is 400, missing/cross-scope identity 404, invalid state/conflict/unavailable runtime 409, and persistence failure 503, all JSON. No arbitrary lifecycle PATCH, checkpoint injection, deletion, redirect or approval endpoint exists.
+
+Authority remains unchanged: no secrets, tool access, external actions, permission/approval engine, cloud/physical runtime, recursive autonomy, Artifact/Task Report, Knowledge, telemetry, or Stage 9+ scope. See `docs/STAGE-8-VERIFICATION.md` for the exact human verification path and evidence.
+
+## Stage 0 decisions (historical)
 
 1. Use one TypeScript package while Prototype 0 remains a modular monolith.
 2. Use React/Vite without a full-stack meta-framework so local runtime boundaries remain explicit.
