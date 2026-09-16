@@ -285,6 +285,7 @@ export async function startStudioServer(options: StudioServerOptions) {
     if (await handleTaskApi(request, response, taskService, url)) return;
     if (await handleConversationApi(request, response, conversationService, url)) return;
     if (await handleWorkspaceApi(request, response, workspaceService, url)) return;
+    if (url.pathname.startsWith('/api/')) { sendJson(response, 404, { error: 'API endpoint not found.', code: 'api_not_found' }); return; }
     if (vite) {
       vite.middlewares(request, response, (error?: unknown) => {
         if (error) {

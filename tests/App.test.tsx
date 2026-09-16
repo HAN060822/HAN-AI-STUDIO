@@ -151,6 +151,17 @@ describe('AI World Lobby', () => {
     expect(within(result).getByText(/Provider mock · Model mock-basic · succeeded/i)).toBeInTheDocument();
   });
 
+  it('shows a visible retryable error when invocation targets cannot load', async () => {
+    const workingFetch = createWorkspaceFetch();
+    vi.stubGlobal('fetch', vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
+      if (new URL(String(input), 'http://local').pathname === '/api/agents/invocation-targets') return Promise.reject(new Error('stale server'));
+      return workingFetch(input, init);
+    }));
+    render(<App />);
+    expect(await screen.findByRole('alert')).toHaveTextContent(/mock test backend could not be loaded/i);
+    expect(screen.getByRole('button', { name: /try again/i })).toBeInTheDocument();
+  });
+
   it('creates, reloads, opens, renames, closes, archives, and restores a workspace', async () => {
     const persistentFetch = createWorkspaceFetch();
     vi.stubGlobal('fetch', persistentFetch);
