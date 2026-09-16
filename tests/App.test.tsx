@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import type { Chat, Message } from '../src/core/conversations/conversation';
+import type { Task } from '../src/core/tasks/task';
 import type { Workspace } from '../src/core/workspaces/workspace';
 import { App } from '../src/app/App';
 
@@ -13,11 +14,41 @@ function createWorkspaceFetch(initial: Workspace[] = []) {
   let workspaceId = rows.length;
   let chatId = 0;
   let messageId = 0;
+  let taskId = 0;
   let chats: Chat[] = [];
   let messages: Message[] = [];
+  let tasks: Task[] = [];
   return vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
     const url = new URL(String(input), 'http://local');
     const method = init?.method ?? 'GET';
+    const taskMatch = url.pathname.match(/^\/api\/workspaces\/([^/]+)\/tasks(?:\/([^/]+))?$/);
+    if (taskMatch) {
+      const [, workspaceIdFromPath, taskIdFromPath] = taskMatch;
+      const workspace = rows.find((row) => row.id === workspaceIdFromPath);
+      if (!workspace) return json({ error: 'Workspace not found' }, 404);
+      const task = taskIdFromPath ? tasks.find((row) => row.id === taskIdFromPath) : undefined;
+      if (taskIdFromPath && (!task || task.workspaceId !== workspaceIdFromPath)) return json({ error: 'Task not found' }, 404);
+      if (!taskIdFromPath && method === 'GET') {
+        const sourceChatId = url.searchParams.get('sourceChatId');
+        return json({ tasks: tasks.filter((row) => row.workspaceId === workspaceIdFromPath && (!sourceChatId || row.sourceChatId === sourceChatId)) });
+      }
+      if (!taskIdFromPath && method === 'POST') {
+        const body = JSON.parse(String(init?.body)) as { title: string; goal: string; sourceChatId?: string };
+        const now = new Date(2026, 8, 15, 14, taskId).toISOString();
+        const created: Task = { id: `task-${++taskId}`, workspaceId: workspaceIdFromPath, sourceChatId: body.sourceChatId ?? null, title: body.title.trim(), goal: body.goal.trim(), status: 'draft', createdAt: now, updatedAt: now, completedAt: null, schemaVersion: 1 };
+        tasks = [created, ...tasks];
+        return json({ task: created }, 201);
+      }
+      if (task && method === 'GET') return json({ task });
+      if (task && method === 'PATCH') {
+        const body = JSON.parse(String(init?.body)) as Partial<Task>;
+        const now = new Date(2026, 8, 15, 15, taskId).toISOString();
+        const updated: Task = { ...task, ...body, updatedAt: now, completedAt: body.status === 'completed' ? now : task.completedAt };
+        tasks = tasks.map((row) => row.id === updated.id ? updated : row);
+        return json({ task: updated });
+      }
+      return json({ error: 'Task endpoint not found' }, 404);
+    }
     const conversationMatch = url.pathname.match(/^\/api\/workspaces\/([^/]+)\/chats(?:\/([^/]+)(?:\/(messages))?)?$/);
     if (conversationMatch) {
       const [, workspaceIdFromPath, chatIdFromPath, resource] = conversationMatch;
@@ -191,5 +222,55 @@ describe('AI World Lobby', () => {
     expect(await screen.findByRole('alert')).toHaveTextContent(/persistence is unavailable/i);
     expect(composer).toHaveValue('Do not lose this draft');
     expect(screen.queryByText('Do not lose this draft', { selector: 'article p' })).not.toBeInTheDocument();
+  });
+
+  it('creates, edits, transitions, reloads, and links persistent Tasks without pretending to execute them', async () => {
+    const persistentFetch = createWorkspaceFetch();
+    vi.stubGlobal('fetch', persistentFetch);
+    const firstRender = render(<App />);
+    await screen.findByText(/your first room is waiting/i);
+    fireEvent.click(screen.getByRole('button', { name: /create workspace/i }));
+    fireEvent.change(screen.getByRole('textbox', { name: /workspace name/i }), { target: { value: 'Task workspace' } });
+    fireEvent.click(screen.getByRole('button', { name: /^create$/i }));
+    fireEvent.click(await screen.findByRole('button', { name: /^open$/i }));
+    await screen.findByText(/no tasks yet/i);
+    fireEvent.click(screen.getByRole('button', { name: /new task/i }));
+    fireEvent.change(screen.getByRole('textbox', { name: /^task title$/i }), { target: { value: 'Stage 4 persistence test' } });
+    fireEvent.change(screen.getByRole('textbox', { name: /^goal$/i }), { target: { value: 'Verify persistent Task state.' } });
+    fireEvent.click(screen.getByRole('button', { name: /^create task$/i }));
+    const taskHeading = await screen.findByRole('heading', { name: 'Stage 4 persistence test', level: 2 });
+    const panel = taskHeading.closest('section');
+    if (!panel) throw new Error('Expected Task panel.');
+    expect(within(panel).getByText('Verify persistent Task state.')).toBeInTheDocument();
+    expect(within(panel).getByText(/execution is not connected/i)).toBeInTheDocument();
+    fireEvent.click(within(panel).getByRole('button', { name: /discussing/i }));
+    await waitFor(() => expect(within(panel).getByText('Discussing', { selector: 'dd' })).toBeInTheDocument());
+    fireEvent.click(within(panel).getByRole('button', { name: /^edit$/i }));
+    fireEvent.change(within(panel).getByRole('textbox', { name: /^task title$/i }), { target: { value: 'Persistent Task renamed' } });
+    fireEvent.change(within(panel).getByRole('textbox', { name: /^goal$/i }), { target: { value: 'Updated durable goal.' } });
+    fireEvent.click(within(panel).getByRole('button', { name: /save task/i }));
+    expect(await within(panel).findByRole('heading', { name: 'Persistent Task renamed' })).toBeInTheDocument();
+    fireEvent.click(within(panel).getByRole('button', { name: /back to tasks/i }));
+    expect(await screen.findByRole('heading', { name: 'Persistent Task renamed', level: 3 })).toBeInTheDocument();
+
+    await screen.findByText(/start a conversation/i);
+    fireEvent.click(screen.getByRole('button', { name: /new chat/i }));
+    await screen.findByText(/no task is linked to this chat/i);
+    fireEvent.click(screen.getByRole('button', { name: /task from chat/i }));
+    fireEvent.change(screen.getByRole('textbox', { name: /^task title$/i }), { target: { value: 'Chat-related Task' } });
+    fireEvent.change(screen.getByRole('textbox', { name: /^goal$/i }), { target: { value: 'Keep discussion and work distinct.' } });
+    fireEvent.click(screen.getByRole('button', { name: /create related task/i }));
+    const relatedHeading = await screen.findByRole('heading', { name: 'Chat-related Task', level: 2 });
+    const relatedPanel = relatedHeading.closest('section');
+    if (!relatedPanel) throw new Error('Expected related Task panel.');
+    expect(within(relatedPanel).getByText('chat-1')).toBeInTheDocument();
+
+    firstRender.unmount();
+    render(<App />);
+    fireEvent.click(await screen.findByRole('button', { name: /^open$/i }));
+    expect(await screen.findByRole('heading', { name: 'Persistent Task renamed', level: 3 })).toBeInTheDocument();
+    fireEvent.click(screen.getAllByRole('button', { name: /open task/i })[1]);
+    expect(await screen.findByText('Updated durable goal.')).toBeInTheDocument();
+    expect(screen.getByText('Discussing', { selector: 'dd' })).toBeInTheDocument();
   });
 });

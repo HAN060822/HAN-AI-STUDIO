@@ -1,6 +1,7 @@
 import { type FormEvent, useEffect, useState } from 'react';
 import { ChatView } from '../conversations/ChatView';
 import { WorkspaceChats } from '../conversations/WorkspaceChats';
+import { WorkspaceTasks } from '../tasks/WorkspaceTasks';
 import type { Workspace } from '../../core/workspaces/workspace';
 import type { WorkspaceController } from './useWorkspaces';
 
@@ -10,7 +11,7 @@ type WorkspaceViewProps = {
   onClose: () => void;
 };
 
-const futureRooms = ['Tasks', 'Projects', 'Knowledge', 'Assets', 'History'];
+const futureRooms = ['Projects', 'Knowledge', 'Assets', 'History'];
 
 export function WorkspaceView({ workspace, controller, onClose }: WorkspaceViewProps) {
   const [editing, setEditing] = useState(false);
@@ -41,6 +42,7 @@ export function WorkspaceView({ workspace, controller, onClose }: WorkspaceViewP
       </form> : <div className="workspace-hero-copy"><p className="eyebrow">Workspace</p><h1>{workspace.name}</h1><p>{workspace.description || 'A persistent place, ready for its purpose.'}</p><div className="workspace-meta"><span>Status · {workspace.status}</span><span>Created · {new Date(workspace.createdAt).toLocaleString()}</span><span>Updated · {new Date(workspace.updatedAt).toLocaleString()}</span><span>ID · {workspace.id}</span></div></div>}
       {!editing && <div className="workspace-hero-actions"><button type="button" onClick={() => setEditing(true)}>Edit</button><button type="button" className="archive-button" onClick={async () => { const archived = await controller.archive(workspace.id); if (archived) onClose(); }}>Archive</button></div>}
     </header>
+    <WorkspaceTasks workspaceId={workspace.id} />
     <WorkspaceChats workspaceId={workspace.id} onOpen={(chat) => setOpenChatId(chat.id)} />
     <section aria-labelledby="workspace-rooms-heading" className="workspace-rooms"><div className="section-heading"><div><p className="eyebrow">Inside this place</p><h2 id="workspace-rooms-heading">Workspace rooms</h2></div><span className="section-note">Arriving in later stages</span></div><div>{futureRooms.map((room) => <article key={room}><span aria-hidden="true">○</span><h3>{room}</h3><p>Not connected yet</p></article>)}</div></section>
   </div>;

@@ -4,10 +4,13 @@ import { createServer, type IncomingMessage, type ServerResponse } from 'node:ht
 import { extname, join, resolve, sep } from 'node:path';
 import { URL } from 'node:url';
 import { ChatNotFoundError, ChatWorkspaceMismatchError, ConversationService, ConversationWorkspaceNotFoundError } from '../application/conversations/conversationService.ts';
+import { TaskNotFoundError, TaskService, TaskSourceChatNotFoundError, TaskSourceChatWorkspaceMismatchError, TaskWorkspaceMismatchError, TaskWorkspaceNotFoundError } from '../application/tasks/taskService.ts';
 import { WorkspaceNotFoundError, WorkspaceService } from '../application/workspaces/workspaceService.ts';
 import { ConversationValidationError } from '../core/conversations/conversation.ts';
+import { isTaskStatus, TaskValidationError } from '../core/tasks/task.ts';
 import { WorkspaceValidationError } from '../core/workspaces/workspace.ts';
 import { SqliteConversationRepository } from '../storage/sqlite/sqliteConversationRepository.ts';
+import { SqliteTaskRepository } from '../storage/sqlite/sqliteTaskRepository.ts';
 import { SqliteWorkspaceRepository } from '../storage/sqlite/sqliteWorkspaceRepository.ts';
 
 type StudioServerOptions = {
@@ -105,6 +108,51 @@ async function handleConversationApi(request: IncomingMessage, response: ServerR
   return true;
 }
 
+async function handleTaskApi(request: IncomingMessage, response: ServerResponse, service: TaskService, url: URL): Promise<boolean> {
+  const match = url.pathname.match(/^\/api\/workspaces\/([^/]+)\/tasks(?:\/([^/]+))?$/);
+  if (!match) return false;
+  const workspaceId = decodeURIComponent(match[1]);
+  const taskId = match[2] ? decodeURIComponent(match[2]) : undefined;
+
+  try {
+    if (!taskId && request.method === 'GET') {
+      const sourceChatId = url.searchParams.get('sourceChatId') ?? undefined;
+      sendJson(response, 200, { tasks: service.listTasksForWorkspace(workspaceId, sourceChatId) });
+      return true;
+    }
+    if (!taskId && request.method === 'POST') {
+      const body = await readJson(request);
+      if (typeof body.title !== 'string') throw new TaskValidationError('Task title is required.');
+      if (typeof body.goal !== 'string') throw new TaskValidationError('Task goal is required.');
+      if (body.sourceChatId !== undefined && body.sourceChatId !== null && typeof body.sourceChatId !== 'string') throw new TaskValidationError('Source chat ID must be a string or null.');
+      sendJson(response, 201, { task: service.createTask(workspaceId, { title: body.title, goal: body.goal, sourceChatId: body.sourceChatId as string | null | undefined }) });
+      return true;
+    }
+    if (taskId && request.method === 'GET') {
+      sendJson(response, 200, { task: service.getTask(workspaceId, taskId) });
+      return true;
+    }
+    if (taskId && request.method === 'PATCH') {
+      const body = await readJson(request);
+      if (body.title !== undefined && typeof body.title !== 'string') throw new TaskValidationError('Task title must be a string.');
+      if (body.goal !== undefined && typeof body.goal !== 'string') throw new TaskValidationError('Task goal must be a string.');
+      if (body.status !== undefined && !isTaskStatus(body.status)) throw new TaskValidationError('Task status is invalid.');
+      if (body.title === undefined && body.goal === undefined && body.status === undefined) throw new TaskValidationError('At least one Task field is required.');
+      sendJson(response, 200, { task: service.updateTask(workspaceId, taskId, { title: body.title as string | undefined, goal: body.goal as string | undefined, status: isTaskStatus(body.status) ? body.status : undefined }) });
+      return true;
+    }
+    sendJson(response, 404, { error: 'Task endpoint not found.' });
+  } catch (error) {
+    if (error instanceof TaskValidationError || error instanceof WorkspaceValidationError) sendJson(response, 400, { error: error.message });
+    else if (error instanceof TaskWorkspaceNotFoundError || error instanceof TaskNotFoundError || error instanceof TaskWorkspaceMismatchError || error instanceof TaskSourceChatNotFoundError || error instanceof TaskSourceChatWorkspaceMismatchError) sendJson(response, 404, { error: error.message });
+    else {
+      console.error('Task persistence request failed:', error);
+      sendJson(response, 500, { error: 'Task persistence is unavailable. Your change was not saved.' });
+    }
+  }
+  return true;
+}
+
 async function handleWorkspaceApi(request: IncomingMessage, response: ServerResponse, service: WorkspaceService, url: URL): Promise<boolean> {
   if (!url.pathname.startsWith('/api/workspaces')) return false;
 
@@ -185,12 +233,15 @@ export async function startStudioServer(options: StudioServerOptions) {
   const workspaceService = new WorkspaceService(repository);
   const conversationRepository = new SqliteConversationRepository(options.databasePath);
   const conversationService = new ConversationService(conversationRepository, repository);
+  const taskRepository = new SqliteTaskRepository(options.databasePath);
+  const taskService = new TaskService(taskRepository, repository, conversationRepository);
   const vite = options.dev
     ? await (await import('vite')).createServer({ server: { middlewareMode: true }, appType: 'spa' })
     : null;
 
   const server = createServer(async (request, response) => {
     const url = new URL(request.url ?? '/', `http://${request.headers.host ?? 'localhost'}`);
+    if (await handleTaskApi(request, response, taskService, url)) return;
     if (await handleConversationApi(request, response, conversationService, url)) return;
     if (await handleWorkspaceApi(request, response, workspaceService, url)) return;
     if (vite) {
@@ -217,6 +268,7 @@ export async function startStudioServer(options: StudioServerOptions) {
       await new Promise<void>((resolvePromise, reject) => server.close((error) => error ? reject(error) : resolvePromise()));
       repository.close();
       conversationRepository.close();
+      taskRepository.close();
     },
   };
 }

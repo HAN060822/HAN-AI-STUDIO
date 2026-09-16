@@ -25,13 +25,13 @@ The UI may call application use cases, never provider SDKs, SQLite, or Obsidian 
 
 ## Intended module growth
 
-Stages 2–3 exercise `core/workspaces` and `core/conversations`, matching application ports/services, SQLite repositories, and local server routes while keeping browser presentation and typed API clients in `src/app`. Cohesive `agents`, `orchestrator`, `execution`, `context`, `knowledge`, `permissions`, `observability`, `adapters`, and `connectors` modules are added when first used. This reserves boundaries without empty architecture scaffolding.
+Stages 2–4 exercise `core/workspaces`, `core/conversations`, and `core/tasks`, matching application ports/services, SQLite repositories, and local server routes while keeping browser presentation and typed API clients in `src/app`. Cohesive `agents`, `orchestrator`, `execution`, `context`, `knowledge`, `permissions`, `observability`, `adapters`, and `connectors` modules are added when first used. This reserves boundaries without empty architecture scaffolding.
 
 ## Application/data separation
 
 Tracked source and configuration stay in the repository. Mutable user data defaults to `./var`, configurable through `HAN_AI_STUDIO_DATA_DIR`, and is ignored except for `var/.gitkeep`. The Workspace database is `var/studio.sqlite`; WAL and other SQLite sidecars are ignored. Production output goes to ignored `dist/`. Secrets belong in ignored environment files or a future OS-backed facility; they must never use `VITE_*`, because Vite embeds those values in browser assets.
 
-## Stage 2–3 persistence and runtime
+## Stage 2–4 persistence and runtime
 
 The React browser calls same-origin `/api/workspaces` endpoints. The local Node server converts transport input into `WorkspaceService` operations. The service owns validation, stable UUID creation, timestamps, and lifecycle semantics through a `WorkspaceRepository` interface. `SqliteWorkspaceRepository` is the only layer that knows SQL.
 
@@ -40,6 +40,12 @@ The React browser calls same-origin Workspace and Conversation HTTP endpoints. T
 Schema evolution uses an append-only `schema_migrations` table and numbered migrations applied inside `BEGIN IMMEDIATE` transactions. Migration 1 creates `workspaces` and its status/update index. Migration 2 adds `chats` and `messages`, both scoped by restrictive foreign keys (`ON DELETE RESTRICT`) and indexed for their deterministic list order. SQLite runs with foreign keys, WAL journaling, and a five-second busy timeout. Migrations do not delete or rewrite existing data.
 
 A `Chat` belongs to one `Workspace`, and a `Message` belongs to one `Chat`; they are not tasks or provider output. Chat lists order by `updated_at DESC, id ASC`; message histories order by `created_at ASC, id ASC`. Message types reserve `user`, `agent`, and `system`, while Stage 3 permits the user-created role only. The browser never opens SQLite or issues SQL.
+
+Stage 4 adds `Task` as the first persistent work object. A Task belongs to exactly one Workspace and may reference one source Chat from that same Workspace. It has independent identity, title, goal, planning status, timestamps, optional completion timestamp, and schema version. Task lists order by `updated_at DESC, id ASC`. `TaskService` validates identity scope, source-Chat scope, content, and transitions through a dedicated `TaskRepository`; browser code never issues Task SQL.
+
+Migration 3 transactionally adds `tasks`, its Workspace/update index, and source-Chat/update index. Both foreign keys use `ON DELETE RESTRICT`; the source Chat reference is nullable so Workspace Tasks do not require a Chat. Migration 3 neither rewrites nor deletes Workspace, Chat, or Message data.
+
+Stage 4 uses the honest pre-execution states `draft`, `discussing`, `paused`, `blocked`, `completed`, and `cancelled`. Valid transitions are defined in the Task domain. Completed and Cancelled are terminal. These states represent planning and human-maintained Task state only: Task is not Execution, and Stage 4 creates no execution records, runtime activity, progress, participants, or logs.
 
 Node's built-in SQLite API was selected over an ORM or native package because Node 24 is the repository baseline, it introduces no new dependency or compilation step, and the repository interface keeps the implementation replaceable.
 
@@ -51,3 +57,4 @@ Node's built-in SQLite API was selected over an ORM or native package because No
 4. Defer the desktop wrapper choice until validated workflows expose required native capabilities.
 5. Add dependencies and modules only when a vertical stage exercises them.
 6. Stage 3 keeps conversation persistence deliberately local and provider-free: no AI response is fabricated when a user sends a message.
+7. Stage 4 keeps Task lifecycle separate from Chat and future Execution; changing Task state never claims that AI work is running.

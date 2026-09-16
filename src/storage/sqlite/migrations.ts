@@ -46,6 +46,28 @@ const migrations = [
       CREATE INDEX messages_chat_created_idx ON messages(chat_id, created_at ASC, id ASC);
     `,
   },
+  {
+    version: 3,
+    name: 'create_tasks',
+    sql: `
+      CREATE TABLE tasks (
+        id TEXT PRIMARY KEY NOT NULL,
+        workspace_id TEXT NOT NULL,
+        source_chat_id TEXT,
+        title TEXT NOT NULL,
+        goal TEXT NOT NULL,
+        status TEXT NOT NULL CHECK (status IN ('draft', 'discussing', 'paused', 'blocked', 'completed', 'cancelled')),
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL,
+        completed_at TEXT,
+        schema_version INTEGER NOT NULL DEFAULT 1,
+        FOREIGN KEY (workspace_id) REFERENCES workspaces(id) ON DELETE RESTRICT,
+        FOREIGN KEY (source_chat_id) REFERENCES chats(id) ON DELETE RESTRICT
+      );
+      CREATE INDEX tasks_workspace_updated_idx ON tasks(workspace_id, updated_at DESC, id ASC);
+      CREATE INDEX tasks_source_chat_updated_idx ON tasks(source_chat_id, updated_at DESC, id ASC);
+    `,
+  },
 ] as const;
 
 export function applyMigrations(database: DatabaseSync): void {
