@@ -88,3 +88,14 @@ button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visib
 .artifact-list { display: grid; gap: .75rem; margin-top: 1rem; }
 .artifact-content { white-space: pre-wrap; overflow-wrap: anywhere; }
 .outcome-panel [role="alert"] { color: #9a3544; }
+.knowledge-panel { padding: 1.2rem; border: 1px solid #ddd7e9; border-radius: .8rem; background: #faf9fd; overflow-wrap: anywhere; }
+.knowledge-panel fieldset { display: grid; gap: .6rem; min-width: 0; padding: 1rem; margin: 1rem 0; border: 1px solid #ddd7e9; }
+.knowledge-panel select, .knowledge-panel textarea, .knowledge-panel input:not([type="checkbox"]) { width: 100%; min-width: 0; padding: .6rem; border: 1px solid #d9d2e5; border-radius: .45rem; background: white; }
+.knowledge-panel textarea { min-height: 8rem; }
+.knowledge-panel button { padding: .55rem .75rem; justify-self: start; }
+.knowledge-list { display: grid; gap: .5rem; max-height: 14rem; overflow: auto; }
+.knowledge-list button { text-align: left; overflow-wrap: anywhere; }
+.knowledge-list button[aria-pressed="true"] { background: #ece7fa; }
+.knowledge-panel article { margin-top: 1rem; padding: 1rem; border-left: 3px solid #8a6fd1; background: #f0ebfc; }
+.knowledge-content { white-space: pre-wrap; overflow-wrap: anywhere; max-height: 24rem; overflow-y: auto; font-family: inherit; }
+.knowledge-panel [role="alert"] { color: #9a3544; }

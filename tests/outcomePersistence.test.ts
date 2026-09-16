@@ -27,13 +27,13 @@ describe('SQLite Artifact and Task Report persistence', () => {
       const execution = await f.completedExecution();
       f.outcomeRepository.close();
       const database = new DatabaseSync(f.path);
-      database.exec('DROP TABLE task_report_artifacts; DROP TABLE task_report_executions; DROP TABLE task_reports; DROP TABLE artifacts; DELETE FROM schema_migrations WHERE version IN (5, 6); PRAGMA user_version = 4;');
+      database.exec('DROP TABLE knowledge; DROP TABLE task_report_artifacts; DROP TABLE task_report_executions; DROP TABLE task_reports; DROP TABLE artifacts; DELETE FROM schema_migrations WHERE version IN (5, 6, 7); PRAGMA user_version = 4;');
       const beforeTask = f.tasks.getById('task-a');
       const beforeExecution = f.repository.getById(execution.id);
       const upgraded = new SqliteOutcomeRepository(f.path);
       try {
-        expect(database.prepare('SELECT version FROM schema_migrations ORDER BY version').all().map((row) => row.version)).toEqual([1, 2, 3, 4, 5, 6]);
-        expect(database.prepare('PRAGMA user_version').get()?.user_version).toBe(6);
+        expect(database.prepare('SELECT version FROM schema_migrations ORDER BY version').all().map((row) => row.version)).toEqual([1, 2, 3, 4, 5, 6, 7]);
+        expect(database.prepare('PRAGMA user_version').get()?.user_version).toBe(7);
         expect(f.tasks.getById('task-a')).toEqual(beforeTask);
         expect(f.repository.getById(execution.id)).toEqual(beforeExecution);
         expect(database.prepare('PRAGMA foreign_key_check').all()).toEqual([]);

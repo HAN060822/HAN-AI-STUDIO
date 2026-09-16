@@ -1,11 +1,11 @@
 # HAN's AI STUDIO — Build State
 
 - **Current Version:** 0.0.0
-- **Current Stage:** Stage 9 — Artifact + Task Report
-- **Stage Status:** Builder complete — awaiting HAN + ChatGPT review and HAN hands-on verification
-- **Latest Completed Stage:** Stage 9 — Artifact + Task Report (builder verification complete; not sealed)
-- **Latest Git Commit:** `HEAD` — Complete Phase 9 Stage 9 artifact and task report
-- **Baseline Commit:** `92f961c090c97eb0f7a536f94302788fc610834d` — Stage 8 PASS / HANDS-ON PASS / PUSHED / SEALED; fetched, synchronized `main` / `origin/main`, clean before Stage 9
+- **Current Stage:** Stage 10 — Knowledge Interface + Obsidian Connector
+- **Stage Status:** Builder complete — automated and builder browser/real-vault verification passed; awaiting Architect review and HAN acceptance; NOT PUSHED / NOT SEALED
+- **Latest Completed Stage:** Stage 10 (builder complete); latest independently sealed stage is Stage 9
+- **Latest Git Commit:** `HEAD` — Complete Phase 9 Stage 10 knowledge and Obsidian connector (this handoff is included in that commit; obtain exact hash with `git rev-parse HEAD`)
+- **Baseline Commit:** `a0d41c9866f982ca70ed7aa3e8a1734e3d0fce9a` — Stage 9 PASS / HANDS-ON PASS / INDEPENDENT VERIFIED / PUSHED / SEALED; synchronized `main` / `origin/main`, clean before Stage 10
 - **Working Branch:** `main`
 
 ## What Works
@@ -28,7 +28,7 @@
 - A Provider Adapter contract, normalized request/response types, and descriptor/adapter resolver establish the Stage 6 boundary without making provider calls.
 - A server-side Agent invocation service resolves `agent-gpt` and `agent-gemini` through explicit Mock test bindings and one executable deterministic Mock adapter, returning normalized Agent/Provider/Model/mode/status metadata without changing production availability.
 - Home includes a small Prototype test invocation surface whose results are unmistakably marked `MOCK · TEST OUTPUT`; it does not mutate Chat, Task, or Agent production availability.
-- Projects, Knowledge, Assets, and History remain explicit later-stage placeholders.
+- Projects, Assets, and History remain explicit later-stage placeholders; Reviewed Knowledge is now a separate Workspace engineering surface.
 - Persistence and validation failures surface without pretending a write succeeded.
 - A deterministic Orchestrator coordinates only explicitly selected Agent identities through `AgentInvocationService`, with bounded ordered plans and an injectable future planning seam.
 - Sequential collaboration supports one to three distinct selected Agents; Review / Challenge supports a primary contributor and one explicit reviewer. The normal Prototype config exposes GPT and Gemini, not Codex, as Mock test participants.
@@ -42,16 +42,22 @@
 - Workspace-scoped Artifacts now persist as deliberate formal outcomes, with optional Task ownership and immutable copied Execution contribution content plus Agent/Provider/Model/backend provenance.
 - One stable current Task Report per Task is explicitly generated or regenerated from observable stored Task, Execution, failure, Agent and Artifact state; it never claims AI-authored synthesis.
 - The separate outcome UI preserves selected contributions, displays provenance, generates reports, and reconstructs both after browser reload and full server restart.
+- Workspace-scoped Knowledge candidates snapshot selected Artifact/Task Report content and provenance or manual text without altering sources or exporting automatically.
+- Review shows the Markdown, configured vault, and exact path; explicit approval is required for Save. The narrow Obsidian connector creates UTF-8 notes only in `Knowledge/AI-Studio-Generated` with safe UUID-suffixed filenames and no overwrite.
+- Candidate/pending/failed/saved state, bound destination, failure, optimistic revision and timestamps persist in SQLite. Explicit retry handles an identical already-published note without duplication; saved-note Verify is read-only.
+- Browser refresh and full normal development runtime restart preserved saved Knowledge and unsaved candidates. One authorized real-vault smoke note was created; all 91 pre-existing note hashes remained unchanged.
 
 ## Incomplete Work
 
-- Real provider integration, knowledge, connectors, and later-stage Prototype 0 features (Stages 10–14).
+- Real provider integration, broader permissions/secrets/audit, telemetry, and later-stage Prototype 0 features (Stages 11–14).
 - Real AI-generated Chat replies, real-provider inference, Task Agent assignment, message deletion, chat archive/delete, and cross-workspace move/copy are intentionally not implemented.
 - Parallel collaboration, intelligent planning/convergence, standalone collaboration history, and final multi-Agent Chat UX are deferred. Mock echo output proves routing/context/provenance, not intelligence or semantic agreement.
 - Collaboration goal limit is 500 characters; previous contribution handoff limit is 800 characters and truncation may omit trailing context. Standalone Stage 7 results remain transient; contributions inside Stage 8 Executions are durable.
 - No mid-provider-call suspension/abort, automatic replay, uncertain-call recovery, provider timeout, scheduler, cloud/external/physical runtime, or multi-process runtime ownership is implemented. Use one server per database.
 - Abrupt termination or a failed checkpoint write may lose an uncommitted in-flight output. Recovery preserves the last committed application checkpoint, not provider hidden state; Interrupted is terminal.
 - Artifacts are text-only and immutable in Prototype 0; edit/delete, binary/file storage, automatic preservation, report version history, intelligent synthesis, and automatic report refresh are deferred.
+- Knowledge content is immutable in Prototype 0. No edit/delete, conflict resolution, background retry, bidirectional sync, bulk export, import/search, Memory Engine, RAG/embeddings/vector/graph DB, cloud sync, Obsidian plugin, backup system, or final UI redesign is implemented.
+- SQLite confirmation and external note publication are not one transaction. A failed final database write leaves a retryable pending intent; abrupt crashes can leave an owned temporary file/link pair requiring inspection. Publication requires filesystem hard-link support. Path checks are not protection against hostile concurrent directory replacement; trusted local single-owner runtime only, not Stage 11 security.
 
 ## Known Errors
 
@@ -59,14 +65,16 @@
 
 ## Tests Status
 
-- `npm.cmd test`: passed (23 test files, 122 tests) with no React `act(...)` warnings. Includes 11 new Artifact/Task Report service, persistence, migration, HTTP, restart and UI tests plus all 111 Stage 1–8 tests.
-- `npm run build`: passed (strict browser/server TypeScript checks and Vite production bundle).
+- `npm.cmd test`: passed (28 test files, 164 tests) with no React `act(...)` warnings. Includes 42 new Stage 10 domain/promotion/connector/persistence/migration/API/UI tests plus all 122 Stage 1–9 tests. Automated writes use temporary vaults only.
+- `npm.cmd run build`: passed (strict browser/server TypeScript checks and Vite production bundle, 46 modules).
 - Exact `npm.cmd run dev`: combined local runtime and Vite server started on `127.0.0.1:5173` with Mock test backend; full stop/start and browser reload passed for durable Execution state.
 - Real-browser Stage 7 smoke passed: production Agent identities/status, single-Agent invocation, Sequential GPT → Gemini, Review / Challenge with visible handoff, attributed final `MOCK · TEST OUTPUT`, usable form and result layout.
 - Workspace/Chat/human message/Task creation and Active/Closed separation passed in `Stage 7 smoke verification`. Browser refresh and full dev-server restart retained the human data; collaboration ran again after restart. Browser error/warning log was empty. Smoke data is only in ignored `var/studio.sqlite`; existing Workspaces were not modified.
 - Stage 8 real-browser smoke passed in separate `Stage 8 runtime verification`: linked Task, Create/Start, safe-boundary pause with one contribution, Resume to completion, Cancel preserving output, refresh, and Review resume after full dev-server restart. Linked Task remained Draft. Single-Agent and standalone collaboration regressions passed. Browser error/warning log was empty.
 - Stage 9 real-browser smoke passed in separate `Stage 9 outcome verification`: Task → completed two-Agent Execution → final contribution → formal Artifact → deterministic Task Report. Artifact/report identity, content, provenance and references survived browser reload and full dev-server restart. Browser error/warning log was empty.
-- `git diff --check`: passed; no runtime database, secret, generated build output, or dependency change is included in the Stage 9 commit.
+- Stage 10 real-browser smoke passed in isolated `Stage 10 knowledge verification`: Task → two-Agent Mock Execution → Artifact → reviewed Knowledge → explicit Save → real UTF-8 Markdown → Verify. Task Report/manual candidates remained unsaved. Reload and full server restart retained identities, content, provenance and path; browser warning/error log was empty. Exact note path and evidence are in `docs/STAGE-10-VERIFICATION.md`.
+- Real-vault before/after SHA-256 comparison: 91 existing notes unchanged, one clearly identifiable disposable Stage 10 note added in the dedicated generated destination; no canonical architecture notes modified.
+- `git diff --check`: passed; no runtime database, secret, local env, generated build output, or dependency change is included in the Stage 10 commit.
 - Real API and 12-Task UI smoke verification passed for Workspace, Chat, Message, and Task data, including stable Task identity, active/closed classification, goal/state, and optional source Chat relation across refresh and runtime restart.
 - `npm ci`: clean lockfile install completed during Stage 0; npm audit reported 0 vulnerabilities.
 
@@ -111,6 +119,11 @@
 - **EXECUTION OUTPUT ≠ ARTIFACT:** formal outcomes exist only after an explicit preserve request; terminal Execution history is never mutated.
 - Prototype 0 uses many Artifacts per Task and one stable current Task Report per Task. Report regeneration refreshes the same identity from observable records and does not fabricate version history or AI synthesis.
 - Stage 9 Migrations 5 and 6 add Artifact/Task Report snapshots and restrictive relational provenance/reference integrity without rewriting Stage 1–8 data.
+- **OUTCOME ≠ KNOWLEDGE; REVIEW BEFORE SAVE:** preparation is local SQLite-only, not external export. Core/application Knowledge logic depends on repository/connector ports, not Obsidian or filesystem implementations.
+- Stage 10 additive Migration 7 stores Knowledge snapshots/status/revisions with restrictive Workspace/Task/source foreign keys. Scope validation remains in `KnowledgeService`; SQL remains in `SqliteKnowledgeRepository`.
+- `ObsidianConnector` validates an explicitly configured existing vault and bounded generated area. It rejects traversal, links/junctions, unsafe files and overwrite, publishes via exclusive temp + fsync + atomic no-replace hard link, and returns explicit outcome/path.
+- Approval binds a fresh preview to the current snapshot and destination; durable pending intent precedes publish. Failed writes retain candidates and sources. Repeated saves of one identity require matching bytes; new candidates receive new UUID-based names. Saved missing/edited notes are reported, never replaced.
+- Markdown keeps an immutable first save-approval timestamp for retry identity; SQLite/UI separately expose confirmed `savedAt`. No automatic export or restart retry and no final permission-engine claim.
 
 ## Changed Interfaces
 
@@ -131,10 +144,13 @@
 - Stage 8 adds execution create/list/get and explicit control routes under `/api/workspaces/:workspaceId/executions`. Invalid transitions/conflicts are JSON 409; persistence errors are JSON 503. Accepted controls are 202, not claims of completed work.
 - Stage 7 exposes `createPlan` and `contributeNext` as a narrow step seam reused by both standalone collaboration and `LocalExecutionRuntime`; no SQL/lifecycle/provider logic was moved into the Orchestrator.
 - Stage 9 adds Artifact and Task Report create/list/get routes under `/api/workspaces/:workspaceId`; outcome scope/validation remains in `OutcomeService`, SQL remains in `SqliteOutcomeRepository`.
+- Stage 10 adds `GET/POST /api/workspaces/:workspaceId/knowledge`, item GET, preview GET, explicitly approved save POST, and verify GET. Invalid input/approval 400, scope 404, stale/conflict/state 409, unsupported method 405, connector/storage failure 503.
+- Server-only `HAN_AI_STUDIO_OBSIDIAN_VAULT` configures the existing vault. The executable loads ignored `.env.local`; existing process environment wins. Automated server fixtures receive explicit temporary roots and do not load local configuration.
+- `Reviewed Knowledge` UI supplies Artifact/Task Report/manual selection, candidate history, content/provenance/Markdown/path review, explicit approval/save/retry, visible errors and read-only verification. Overall UI architecture is unchanged.
 
 ## Uncommitted Work
 
-- None after the Stage 9 commit. No push performed; local `main` is one Stage 9 commit ahead of the synchronized sealed Stage 8 baseline.
+- None after the single local Stage 10 completion commit. Ignored `.env.local`, `var/studio.sqlite`/sidecars, and `dist/` are local-only and intentionally excluded.
 
 ## Blockers
 
@@ -142,7 +158,7 @@
 
 ## Next Exact Action
 
-STOP for HAN + ChatGPT Stage 9 architecture/functional review and HAN hands-on verification using `docs/STAGE-9-VERIFICATION.md`. Do not push. Do not begin Stage 10 without explicit authorization.
+STOP for HAN + ChatGPT Stage 10 architecture/functional review and HAN acceptance using `docs/STAGE-10-VERIFICATION.md`. Do not push. Do not begin Stage 11 without explicit authorization.
 
 ## Relevant Architecture Documents
 
@@ -151,9 +167,10 @@ STOP for HAN + ChatGPT Stage 9 architecture/functional review and HAN hands-on v
 - `AI-STUDIO.md` — historical context only.
 - `docs/STAGE-8-VERIFICATION.md` — exact human test procedure, builder evidence, safe-boundary/recovery limits and review points.
 - `docs/STAGE-9-VERIFICATION.md` — exact Artifact/Task Report closed-loop procedure, builder evidence, limits and review points.
+- `docs/STAGE-10-VERIFICATION.md` — Knowledge/Obsidian approval loop, exact real-vault disposable note path, persistence/retry evidence, limitations and Architect review points.
 
 ## Stage Gate
 
-- **Current Stage:** Stage 9 — Artifact + Task Report
-- **Stage Status:** Builder complete — awaiting review; not sealed
-- **Stage 10:** NOT started
+- **Current Stage:** Stage 10 — Knowledge Interface + Obsidian Connector
+- **Stage Status:** Builder complete — awaiting Architect review and HAN acceptance; NOT PUSHED / NOT SEALED
+- **Stage 11:** NOT STARTED

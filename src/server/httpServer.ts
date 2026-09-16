@@ -10,6 +10,10 @@ import { OrchestratorService } from '../application/collaboration/orchestratorSe
 import { ExecutionService } from '../application/executions/executionService.ts';
 import { LocalExecutionRuntime } from '../application/executions/localExecutionRuntime.ts';
 import { OutcomeError, OutcomeService } from '../application/outcomes/outcomeService.ts';
+import { KnowledgeService } from '../application/knowledge/knowledgeService.ts';
+import { KnowledgeError } from '../core/knowledge/knowledge.ts';
+import { ObsidianConnector } from '../connectors/obsidian/obsidianConnector.ts';
+import { SqliteKnowledgeRepository } from '../storage/sqlite/sqliteKnowledgeRepository.ts';
 import { ExecutionError, isExecutionAction } from '../core/executions/execution.ts';
 import { SqliteExecutionRepository } from '../storage/sqlite/sqliteExecutionRepository.ts';
 import { SqliteOutcomeRepository } from '../storage/sqlite/sqliteOutcomeRepository.ts';
@@ -35,6 +39,7 @@ type StudioServerOptions = {
   databasePath: string;
   dev?: boolean;
   providerMode?: 'mock' | 'none';
+  obsidianVaultRoot?: string;
 };
 
 type JsonRecord = Record<string, unknown>;
@@ -179,6 +184,32 @@ async function handleExecutionApi(request: IncomingMessage, response: ServerResp
     if (error instanceof ExecutionError) sendJson(response, error.code === 'not_found' ? 404 : error.code === 'invalid_input' ? 400 : error.code === 'persistence_unavailable' ? 503 : 409, { error: error.message, code: error.code });
     else if (error instanceof CollaborationValidationError || error instanceof WorkspaceValidationError) sendJson(response, 400, { error: error.message, code: 'invalid_input' });
     else sendJson(response, 503, { error: 'Execution persistence is unavailable. No successful control is claimed.', code: 'persistence_unavailable' });
+  }
+  return true;
+}
+
+async function handleKnowledgeApi(request: IncomingMessage, response: ServerResponse, service: KnowledgeService, url: URL): Promise<boolean> {
+  const match = url.pathname.match(/^\/api\/workspaces\/([^/]+)\/knowledge(?:\/([^/]+)(?:\/(preview|save|verify))?)?$/);
+  if (!match) return false;
+  try {
+    const workspaceId = decodeURIComponent(match[1]);
+    const id = match[2] ? decodeURIComponent(match[2]) : undefined;
+    const action = match[3];
+    if (!id && request.method === 'GET') sendJson(response, 200, { records: service.list(workspaceId) });
+    else if (!id && request.method === 'POST') sendJson(response, 201, { record: service.create(workspaceId, await readJson(request)) });
+    else if (id && !action && request.method === 'GET') sendJson(response, 200, { record: service.get(workspaceId, id) });
+    else if (id && action === 'preview' && request.method === 'GET') sendJson(response, 200, { preview: service.preview(workspaceId, id) });
+    else if (id && action === 'verify' && request.method === 'GET') sendJson(response, 200, { verification: service.verify(workspaceId, id) });
+    else if (id && action === 'save' && request.method === 'POST') {
+      const record = service.save(workspaceId, id, await readJson(request));
+      sendJson(response, record.status === 'saved' ? 200 : 503, { record, ...(record.failure ? { error: record.failure.message, code: record.failure.code } : {}) });
+    } else sendJson(response, 405, { error: 'Knowledge method is not supported.', code: 'method_not_allowed' });
+  } catch (error) {
+    if (error instanceof KnowledgeError) {
+      const status = error.code === 'not_found' ? 404 : error.code === 'invalid_input' || error.code === 'approval_required' ? 400 : ['conflict', 'stale_preview', 'destination_changed', 'note_changed', 'not_saved'].includes(error.code) ? 409 : 503;
+      sendJson(response, status, { error: error.message, code: error.code });
+    } else if (error instanceof WorkspaceValidationError || error instanceof URIError) sendJson(response, 400, { error: 'Knowledge request must be valid JSON with valid identifiers.', code: 'invalid_input' });
+    else sendJson(response, 503, { error: 'Knowledge storage or connector is unavailable. Save is not confirmed; refresh and review before retrying.', code: 'persistence_unavailable' });
   }
   return true;
 }
@@ -367,6 +398,8 @@ export async function startStudioServer(options: StudioServerOptions) {
   const executions = new ExecutionService(executionRepository, repository, taskRepository, new LocalExecutionRuntime(orchestrator));
   const outcomeRepository = new SqliteOutcomeRepository(options.databasePath);
   const outcomes = new OutcomeService(outcomeRepository, repository, taskRepository, executionRepository);
+  const knowledgeRepository = new SqliteKnowledgeRepository(options.databasePath);
+  const knowledge = new KnowledgeService(knowledgeRepository, repository, outcomeRepository, new ObsidianConnector(options.obsidianVaultRoot));
   const vite = options.dev
     ? await (await import('vite')).createServer({ server: { middlewareMode: true }, appType: 'spa' })
     : null;
@@ -375,6 +408,7 @@ export async function startStudioServer(options: StudioServerOptions) {
     const url = new URL(request.url ?? '/', `http://${request.headers.host ?? 'localhost'}`);
     if (await handleAgentApi(request, response, agentInvocationService, url)) return;
     if (await handleCollaborationApi(request, response, orchestrator, url)) return;
+    if (await handleKnowledgeApi(request, response, knowledge, url)) return;
     if (await handleOutcomeApi(request, response, outcomes, url)) return;
     if (await handleExecutionApi(request, response, executions, url)) return;
     if (await handleTaskApi(request, response, taskService, url)) return;
@@ -410,6 +444,7 @@ export async function startStudioServer(options: StudioServerOptions) {
       taskRepository.close();
       executionRepository.close();
       outcomeRepository.close();
+      knowledgeRepository.close();
     },
   };
 }

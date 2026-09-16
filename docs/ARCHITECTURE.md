@@ -163,6 +163,48 @@ Workspace UI adds a distinct **Artifacts & Task Reports** panel. HAN selects a T
 
 Current limits are deliberate: text content only; immutable Artifact records with no edit/delete UI; one explicitly regenerated current report rather than version history; no binary/file storage, AI synthesis, automatic outcome policy, Knowledge promotion, Obsidian connector, backup system, or Stage 10+ behavior. Existing authority remains unchanged and no credentials, provider calls, external actions, hidden reasoning, permissions, or scheduler were added. See `docs/STAGE-9-VERIFICATION.md`.
 
+## Stage 10 reviewed Knowledge and Obsidian boundary
+
+**Conversation ≠ Execution History ≠ Artifact ≠ Task Report ≠ Knowledge.** Knowledge is deliberately preserved reusable information, never an automatic export of a conversation or every outcome. The path is `KnowledgePanel → same-origin API → KnowledgeService → KnowledgeRepository / KnowledgeConnector → SQLite / ObsidianConnector`. Only the server composition root chooses the concrete connector. Core types and the application service import no Obsidian paths or filesystem implementation; React never writes files.
+
+### Contracts and persistence
+
+`Knowledge` has a stable UUID, Workspace ID, title, immutable content snapshot, source type (`artifact`, `task-report`, `manual`), source/Task/Execution references where available, source snapshot timestamp, created/updated/approved/saved timestamps, schema version, optimistic revision, destination identity/relative path, failure, and explicit `candidate | pending | failed | saved` status. Title is bounded to 180 characters; content to 100,000. Manual input cannot forge source references. Source-based input accepts an existing same-Workspace ID, not caller-supplied content/provenance. A report candidate is a deterministic, visibly non-AI-authored snapshot and does not change if that report is regenerated later. Task and Execution state are never mutated by promotion.
+
+Migration 7 only adds `knowledge` and a Workspace/update index, with restrictive Workspace/Task/Artifact/Task Report foreign keys, checked status, revision, and JSON snapshot. It does not rewrite prior migrations or source records. The repository uses atomic compare-and-swap updates for status and snapshot. Source scope is enforced by the application service, like the existing outcome boundary. SQLite owns the record; Obsidian is the first human-readable external materialization, not the domain model.
+
+The connector port provides read-only `preview`, explicit `publish`, and read-only `verify`. Preview returns connector/destination identity, human-readable destination label, relative path and rendered Markdown. The service binds a SHA-256 review token to the complete current record and preview. Save must include `{approved: true, previewToken}`; stale previews are rejected. This is review freshness, not authentication or a cryptographic permission capability.
+
+### Save ordering and repeat behavior
+
+1. Prepare persists a `candidate` only; it never calls publish or creates a vault directory.
+2. Preview validates configuration/path without writes. The UI displays content and destination and requires an unchecked-by-default approval.
+3. Explicit Save revalidates the preview, persists `pending` with destination identity and the first approval timestamp, then calls the connector.
+4. Connector success becomes `saved` with a separate confirmed `savedAt`; write failure becomes a durable `failed` state with a safe error. Failed/pending records and source outcomes remain available for reviewed explicit retry.
+5. If final SQLite confirmation fails after publication, the previous pending intent remains. A retry of this identity recognizes the byte-identical note and confirms it without a duplicate. There is no automatic retry on restart.
+
+The destination becomes fixed on first approval; changing configured vaults cannot silently redirect a pending/failed retry. The stable filename includes Knowledge UUID, so separate explicitly prepared candidates get different files even with identical titles. Repeating a saved record only verifies its existing bytes: a missing or human-modified saved note is reported and never overwritten or silently recreated. Candidates/content are immutable in this prototype; author revised content as a new explicitly reviewed candidate.
+
+### Filesystem and configuration
+
+`HAN_AI_STUDIO_OBSIDIAN_VAULT` is server-only configuration, with no hardcoded personal path. Node loads ignored `.env.local` at the executable entry point before configuration; process environment takes precedence. The server factory takes an explicit optional root and never reads the real-vault environment, keeping temporary automated fixtures isolated. A missing/invalid vault is a visible connector error, not a fallback directory or a server-startup requirement.
+
+The configured root must be absolute, existing, accessible, a real directory, and contain `.obsidian`. All root ancestors and destination components are checked for symlinks/junctions. The only destination is **`Knowledge/AI-Studio-Generated`**, chosen after inspecting the existing vault structure. Canonical `Knowledge/AI/HAN-AI-STUDIO` architecture notes are outside this write surface. Neither API requests nor titles specify paths. UUID validation, ASCII filename sanitization, a non-reserved `knowledge-` prefix, containment checks, and no-overwrite creation prevent traversal and name collisions.
+
+UTF-8/LF Markdown contains JSON-quoted frontmatter scalars for Knowledge/Workspace/Task/source/Execution identity, source timestamp, creation timestamp, `approved_for_save_at`, and schema version, followed by readable title/content. `approved_for_save_at` is the immutable first authorized save-attempt timestamp and is filled only on explicit Save; it is not a claim of confirmed completion. The UI and SQLite separately expose confirmed `savedAt`. Keeping file bytes stable across the publication/confirmation gap makes retries verifiable.
+
+Publication writes and fsyncs an exclusive temporary file in that destination, atomically hard-links it to the final name without replacement, and unlinks only its own temporary name. An existing identical regular, single-link file is idempotent; a different file, symlink/junction, hard-link alias or non-file fails without overwrite. Verification compares exact UTF-8 bytes. This requires a filesystem supporting hard links (the real NTFS smoke passed); unsupported filesystems fail honestly.
+
+### API, UI and limits
+
+Under `/api/workspaces/:workspaceId/knowledge`: GET lists; POST prepares a candidate (201); GET `/:id` retrieves; GET `/:id/preview` previews; POST `/:id/save` explicitly publishes; GET `/:id/verify` compares a saved note. Invalid input/approval is 400, missing/cross-scope is 404, stale review/state/destination conflict is 409, unsupported methods are 405, and connector/storage failure is 503. A publish failure returns the retained failed record plus safe error, never false success. Configuration failures are visible and leave local candidates intact.
+
+The small Workspace engineering panel provides source selection/manual fields, candidate history, provenance/content, expandable Markdown, visible destination/path, approval checkbox, Save/Retry and Verify. Refresh obtains newly preserved Artifacts/reports. Review approval resets when the selected record/preview changes; failures are visible and do not silently mark success. This stage does not redesign the overall UI.
+
+Limits: SQLite and external filesystem are not one transaction; recovery is explicit and conservative. A process crash can leave an owned `.pending-*.tmp` or an unconfirmed note; a leftover hard-link pair fails closed and needs inspection, not automatic deletion. The connector checks paths but does not provide OS-level protection against hostile concurrent directory swaps; assume one trusted local owner/server. Keep loopback binding. This is not Stage 11 authentication, authorization, secrets or audit. No watcher, bidirectional sync, update/delete/conflict resolution, backup, bulk export, automatic extraction, Memory Engine, RAG, embeddings, vector/graph DB, cloud sync, Obsidian plugin, model/router/provider expansion or Stage 11+ work is included.
+
+See `docs/STAGE-10-VERIFICATION.md` for reproducible tests, the single-note real-vault smoke and Architect review points.
+
 ## Stage 0 decisions (historical)
 
 1. Use one TypeScript package while Prototype 0 remains a modular monolith.

@@ -144,6 +144,25 @@ const migrations = [
       );
     `,
   },
+  {
+    version: 7,
+    name: 'create_reviewed_knowledge',
+    sql: `
+      CREATE TABLE knowledge (
+        id TEXT PRIMARY KEY NOT NULL,
+        workspace_id TEXT NOT NULL REFERENCES workspaces(id) ON DELETE RESTRICT,
+        task_id TEXT REFERENCES tasks(id) ON DELETE RESTRICT,
+        artifact_id TEXT REFERENCES artifacts(id) ON DELETE RESTRICT,
+        report_id TEXT REFERENCES task_reports(id) ON DELETE RESTRICT,
+        status TEXT NOT NULL CHECK (status IN ('candidate', 'pending', 'failed', 'saved')),
+        updated_at TEXT NOT NULL,
+        revision INTEGER NOT NULL CHECK (revision >= 0),
+        snapshot_json TEXT NOT NULL CHECK (json_valid(snapshot_json)),
+        CHECK (artifact_id IS NULL OR report_id IS NULL)
+      );
+      CREATE INDEX knowledge_workspace_updated_idx ON knowledge(workspace_id, updated_at DESC, id ASC);
+    `,
+  },
 ] as const;
 
 export function applyMigrations(database: DatabaseSync): void {
