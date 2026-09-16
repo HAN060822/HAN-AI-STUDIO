@@ -24,12 +24,12 @@ describe('Provider Adapter contracts', () => {
     const fake: ProviderAdapter<unknown, unknown> = {
       descriptor,
       async execute(request) {
-        return { providerId: descriptor.providerId, modelId: 'fake-model', output: `FAKE: ${request.input}` };
+        return { agentId: request.agentId, providerId: descriptor.providerId, modelId: 'fake-model', mode: 'mock', status: 'succeeded', output: `FAKE: ${request.input}` };
       },
     };
     const registry = new ProviderAdapterRegistry([{ descriptor, adapter: fake }]);
     const response = await registry.resolve('openai')?.execute({ agentId: 'agent-gpt', input: 'Stage 5 contract' });
-    expect(response).toEqual({ providerId: 'openai', modelId: 'fake-model', output: 'FAKE: Stage 5 contract' });
+    expect(response).toEqual({ agentId: 'agent-gpt', providerId: 'openai', modelId: 'fake-model', mode: 'mock', status: 'succeeded', output: 'FAKE: Stage 5 contract' });
     expect(network).not.toHaveBeenCalled();
   });
 });

@@ -22,6 +22,11 @@ function createWorkspaceFetch(initial: Workspace[] = [], initialTasks: Task[] = 
   return vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
     const url = new URL(String(input), 'http://local');
     const method = init?.method ?? 'GET';
+    if (url.pathname === '/api/agents/invocation-targets' && method === 'GET') return json({ targets: [{ agentId: 'agent-gpt', displayName: 'GPT', backendMode: 'mock', providerId: 'mock', modelId: 'mock-basic' }] });
+    if (url.pathname === '/api/agents/agent-gpt/invoke' && method === 'POST') {
+      const body = JSON.parse(String(init?.body)) as { input: string };
+      return json({ result: { agentId: 'agent-gpt', agentDisplayName: 'GPT', providerId: 'mock', modelId: 'mock-basic', mode: 'mock', status: 'succeeded', output: `[MOCK response for agent-gpt] ${body.input}` } });
+    }
     const taskMatch = url.pathname.match(/^\/api\/workspaces\/([^/]+)\/tasks(?:\/([^/]+))?$/);
     if (taskMatch) {
       const [, workspaceIdFromPath, taskIdFromPath] = taskMatch;
@@ -133,6 +138,17 @@ describe('AI World Lobby', () => {
     fireEvent.change(screen.getByRole('textbox', { name: /global intent/i }), { target: { value: 'Plan a garden' } });
     fireEvent.click(screen.getByRole('button', { name: /preview intent entry/i }));
     expect(screen.getByText(/intent execution is not connected yet/i)).toBeInTheDocument();
+  });
+
+  it('invokes the configured test Agent and labels normalized Mock output', async () => {
+    render(<App />);
+    expect(await screen.findByRole('option', { name: /gpt · mock test backend/i })).toBeInTheDocument();
+    fireEvent.change(screen.getByRole('textbox', { name: /^message$/i }), { target: { value: 'Boundary proof' } });
+    fireEvent.click(screen.getByRole('button', { name: /invoke test agent/i }));
+    const result = await screen.findByRole('article', { name: /mock provider result/i });
+    expect(within(result).getByText(/mock · test output/i)).toBeInTheDocument();
+    expect(within(result).getByText('[MOCK response for agent-gpt] Boundary proof')).toBeInTheDocument();
+    expect(within(result).getByText(/Provider mock · Model mock-basic · succeeded/i)).toBeInTheDocument();
   });
 
   it('creates, reloads, opens, renames, closes, archives, and restores a workspace', async () => {

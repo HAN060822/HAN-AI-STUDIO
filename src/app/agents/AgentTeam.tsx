@@ -1,5 +1,6 @@
 import { initialAgentRegistry } from '../../application/agents/initialAgentRegistry';
 import type { AgentId, AgentStatus } from '../../core/agents/agent';
+import { AgentInvocationPanel } from './AgentInvocationPanel';
 
 const presentation: Record<AgentId, { mark: string; accent: 'lavender' | 'peach' | 'blue' }> = {
   'agent-gpt': { mark: '✦', accent: 'lavender' },
@@ -25,5 +26,6 @@ export function AgentTeam() {
         </article>;
       })}
     </div>
+    <AgentInvocationPanel />
   </section>;
 }

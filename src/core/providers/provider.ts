@@ -1,7 +1,7 @@
 import type { AgentId } from '../agents/agent.ts';
 
-export type ProviderId = 'openai' | 'google' | 'codex';
-export type ProviderAdapterId = 'openai' | 'gemini' | 'codex';
+export type ProviderId = 'openai' | 'google' | 'codex' | 'mock';
+export type ProviderAdapterId = 'openai' | 'gemini' | 'codex' | 'mock';
 export type ProviderBindingStatus = 'unconfigured' | 'configured';
 
 export type ProviderBinding = Readonly<{
@@ -28,8 +28,11 @@ export type ProviderRequest<Extensions = never> = Readonly<{
 }>;
 
 export type ProviderResponse<Extensions = never> = Readonly<{
+  agentId: AgentId;
   providerId: ProviderId;
   modelId: string;
+  mode: 'mock' | 'real';
+  status: 'succeeded';
   output: string;
   extensions?: Extensions;
 }>;

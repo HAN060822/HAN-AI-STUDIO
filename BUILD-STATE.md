@@ -1,10 +1,10 @@
 # HAN's AI STUDIO — Build State
 
 - **Current Version:** 0.0.0
-- **Current Stage:** Stage 5 — Agent Registry + Provider Adapter Interface
+- **Current Stage:** Stage 6 — Provider Integration
 - **Stage Status:** Complete — awaiting HAN's review
-- **Latest Completed Stage:** Stage 5 — Agent Registry + Provider Adapter Interface
-- **Latest Git Commit:** `HEAD` — Complete Phase 9 Stage 5 agent registry and adapter interface
+- **Latest Completed Stage:** Stage 6 — Provider Integration
+- **Latest Git Commit:** `HEAD` — Complete Phase 9 Stage 6 provider integration
 - **Working Branch:** `main`
 
 ## What Works
@@ -25,12 +25,14 @@
 - A global, configuration-backed Agent Registry exposes the stable GPT, Gemini, and Codex AI Studio identities, machine-readable capability metadata, honest availability, and inspectable provider bindings.
 - The Home AI Team renders from the Agent Registry and reports providers as not connected; the former simulated Working/Waiting presentation is removed.
 - A Provider Adapter contract, normalized request/response types, and descriptor/adapter resolver establish the Stage 6 boundary without making provider calls.
+- A server-side Agent invocation service resolves `agent-gpt` through an explicit Mock test binding and executable deterministic Mock adapter, returning normalized Agent/Provider/Model/mode/status metadata.
+- Home includes a small Prototype test invocation surface whose results are unmistakably marked `MOCK · TEST OUTPUT`; it does not mutate Chat, Task, or Agent production availability.
 - Projects, Knowledge, Assets, and History remain explicit later-stage placeholders.
 - Persistence and validation failures surface without pretending a write succeeded.
 
 ## Incomplete Work
 
-- Real/mock provider integrations, agent runtime, orchestration, execution, artifacts, knowledge, connectors, and all later-stage Prototype 0 features (Stages 6–14).
+- Real provider integration, orchestration, execution runtime, artifacts, knowledge, connectors, and all later-stage Prototype 0 features (Stages 7–14).
 - AI-generated replies, provider/model execution, Agent assignment, message deletion, chat archive/delete, and cross-workspace move/copy are intentionally not implemented.
 
 ## Known Errors
@@ -39,7 +41,7 @@
 
 ## Tests Status
 
-- `npm test`: passed (11 test files, 31 tests) with no React `act(...)` warnings, including stable Agent identity, registry resolution and capability queries, Provider/Model separation, descriptor-only adapters, a deterministic no-network fake, registry-backed UI, and all Stage 1–4 regressions.
+- `npm test`: passed (12 test files, 35 tests) with no React `act(...)` warnings, including deterministic Mock execution, normalized metadata, binding resolution, honest failure cases, no silent fallback, UI invocation, and all Stage 1–5 regressions.
 - `npm run build`: passed (strict browser/server TypeScript checks and Vite production bundle).
 - `npm run dev`: combined local runtime and Vite server started successfully; HTTP smoke check returned 200.
 - Real API and 12-Task UI smoke verification passed for Workspace, Chat, Message, and Task data, including stable Task identity, active/closed classification, goal/state, and optional source Chat relation across refresh and runtime restart.
@@ -69,6 +71,10 @@
 - **NO FAKE ACTIVITY:** initial Agents and adapter descriptors are unavailable/unconfigured; Stage 5 performs no inference and presents no simulated execution state.
 - GPT, Gemini, and Codex are global application-defined Agents rather than per-Workspace SQLite rows. User-created Agents and persistent Agent configuration are deferred.
 - Capability metadata describes potential fit only. It grants no connection, permission, approval, or autonomy.
+- **Mock Provider ≠ Fake Agent:** `agent-gpt` keeps its stable identity and production binding while the server applies an explicit test-only Mock binding.
+- **Provider Connectivity ≠ Agent Permission:** successful Mock invocation grants no terminal, repository, filesystem, external-action, or autonomous Task authority.
+- **UI → Application → Adapter → Provider:** React calls only the same-origin API; `AgentInvocationService` owns resolution and validation behind the server boundary.
+- **FAIL HONESTLY** and **NO SILENT FALLBACK:** unknown/unavailable/unconfigured/malformed/failed cases return safe normalized errors; real configuration never silently substitutes Mock.
 
 ## Changed Interfaces
 
@@ -81,6 +87,8 @@
 - Stage 4 UI exposes compact, bounded Active and Closed views for Workspace Tasks and Chat-related Tasks without adding providers, execution, progress, participants, artifacts, or logs.
 - Stage 5 application boundary exposes `AgentRegistry` plus `ProviderAdapterRegistry`; the latter resolves honest unavailable descriptors now and executable adapters only when supplied later.
 - Stage 5 changes no local HTTP endpoint. Provider SDKs, credentials, settings, model selectors, inference, and Task assignment remain absent.
+- Stage 6 adds `GET /api/agents/invocation-targets` and `POST /api/agents/:agentId/invoke`. `HAN_AI_STUDIO_PROVIDER_MODE` is `mock` by default or `none`; it contains no secret.
+- No real adapter was implemented because no provider credential/configuration exists and Stage 6 completion must not depend on network or quota. No Provider SDK dependency was added.
 
 ## Uncommitted Work
 
@@ -92,7 +100,7 @@
 
 ## Next Exact Action
 
-HAN and architecture review Stage 5. After explicit authorization only, begin Stage 6 — Real/Mock Provider Integration by reading this file and `BUILD-PLAN.md`; do not start it automatically.
+HAN and architecture review Stage 6. After explicit authorization only, begin Stage 7 — Orchestrator + Collaboration by reading this file and `BUILD-PLAN.md`; do not start it automatically.
 
 ## Relevant Architecture Documents
 
@@ -102,6 +110,6 @@ HAN and architecture review Stage 5. After explicit authorization only, begin St
 
 ## Stage Gate
 
-- **Current Stage:** Stage 5 — Agent Registry + Provider Adapter Interface
+- **Current Stage:** Stage 6 — Provider Integration
 - **Stage Status:** Complete
-- **Stage 6:** NOT started
+- **Stage 7:** NOT started

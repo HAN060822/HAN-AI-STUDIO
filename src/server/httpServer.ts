@@ -3,12 +3,19 @@ import { stat } from 'node:fs/promises';
 import { createServer, type IncomingMessage, type ServerResponse } from 'node:http';
 import { extname, join, resolve, sep } from 'node:path';
 import { URL } from 'node:url';
+import { MockProviderAdapter, MOCK_MODEL_ID } from '../adapters/mock/mockProviderAdapter.ts';
+import { AgentInvocationError, AgentInvocationService } from '../application/agents/agentInvocationService.ts';
+import { initialAgentRegistry } from '../application/agents/initialAgentRegistry.ts';
 import { ChatNotFoundError, ChatWorkspaceMismatchError, ConversationService, ConversationWorkspaceNotFoundError } from '../application/conversations/conversationService.ts';
+import { initialProviderAdapterRegistry } from '../application/providers/initialProviderAdapterRegistry.ts';
+import { ProviderAdapterRegistry, type ProviderAdapterRegistration } from '../application/providers/providerAdapterRegistry.ts';
 import { TaskNotFoundError, TaskService, TaskSourceChatNotFoundError, TaskSourceChatWorkspaceMismatchError, TaskWorkspaceMismatchError, TaskWorkspaceNotFoundError } from '../application/tasks/taskService.ts';
 import { WorkspaceNotFoundError, WorkspaceService } from '../application/workspaces/workspaceService.ts';
 import { ConversationValidationError } from '../core/conversations/conversation.ts';
 import { isTaskStatus, TaskValidationError } from '../core/tasks/task.ts';
 import { WorkspaceValidationError } from '../core/workspaces/workspace.ts';
+import type { AgentId } from '../core/agents/agent.ts';
+import type { ProviderBinding } from '../core/providers/provider.ts';
 import { SqliteConversationRepository } from '../storage/sqlite/sqliteConversationRepository.ts';
 import { SqliteTaskRepository } from '../storage/sqlite/sqliteTaskRepository.ts';
 import { SqliteWorkspaceRepository } from '../storage/sqlite/sqliteWorkspaceRepository.ts';
@@ -18,6 +25,7 @@ type StudioServerOptions = {
   port?: number;
   databasePath: string;
   dev?: boolean;
+  providerMode?: 'mock' | 'none';
 };
 
 type JsonRecord = Record<string, unknown>;
@@ -52,6 +60,30 @@ async function readJson(request: IncomingMessage): Promise<JsonRecord> {
   } catch {
     throw new WorkspaceValidationError('Request body must be valid JSON.');
   }
+}
+
+async function handleAgentApi(request: IncomingMessage, response: ServerResponse, service: AgentInvocationService, url: URL): Promise<boolean> {
+  if (request.method === 'GET' && url.pathname === '/api/agents/invocation-targets') {
+    sendJson(response, 200, { targets: service.listTargets() });
+    return true;
+  }
+  const match = url.pathname.match(/^\/api\/agents\/([^/]+)\/invoke$/);
+  if (!match) return false;
+  try {
+    if (request.method !== 'POST') { sendJson(response, 404, { error: 'Agent endpoint not found.' }); return true; }
+    const body = await readJson(request);
+    if (typeof body.input !== 'string') throw new AgentInvocationError('invalid_input', 'Input is required.');
+    sendJson(response, 200, { result: await service.invoke(decodeURIComponent(match[1]), body.input) });
+  } catch (error) {
+    if (error instanceof AgentInvocationError) {
+      const status = error.code === 'unknown_agent' ? 404 : error.code === 'invalid_input' ? 400 : error.code === 'provider_request_failed' || error.code === 'malformed_provider_response' ? 502 : 409;
+      sendJson(response, status, { error: error.message, code: error.code });
+    } else {
+      console.error('Agent invocation failed safely.');
+      sendJson(response, 500, { error: 'Agent invocation is unavailable.', code: 'invocation_unavailable' });
+    }
+  }
+  return true;
 }
 
 function stringOrNull(value: unknown): string | null | undefined {
@@ -235,12 +267,21 @@ export async function startStudioServer(options: StudioServerOptions) {
   const conversationService = new ConversationService(conversationRepository, repository);
   const taskRepository = new SqliteTaskRepository(options.databasePath);
   const taskService = new TaskService(taskRepository, repository, conversationRepository);
+  const registrations: ProviderAdapterRegistration[] = initialProviderAdapterRegistry.listDescriptors().map((descriptor) => ({ descriptor }));
+  const bindings = new Map<AgentId, ProviderBinding>();
+  if ((options.providerMode ?? 'mock') === 'mock') {
+    const mock = new MockProviderAdapter();
+    registrations.push({ descriptor: mock.descriptor, adapter: mock });
+    bindings.set('agent-gpt', { providerId: 'mock', adapterId: 'mock', modelId: MOCK_MODEL_ID, status: 'configured' });
+  }
+  const agentInvocationService = new AgentInvocationService(initialAgentRegistry, new ProviderAdapterRegistry(registrations), bindings);
   const vite = options.dev
     ? await (await import('vite')).createServer({ server: { middlewareMode: true }, appType: 'spa' })
     : null;
 
   const server = createServer(async (request, response) => {
     const url = new URL(request.url ?? '/', `http://${request.headers.host ?? 'localhost'}`);
+    if (await handleAgentApi(request, response, agentInvocationService, url)) return;
     if (await handleTaskApi(request, response, taskService, url)) return;
     if (await handleConversationApi(request, response, conversationService, url)) return;
     if (await handleWorkspaceApi(request, response, workspaceService, url)) return;

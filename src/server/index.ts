@@ -6,10 +6,12 @@ const host = process.env.HAN_AI_STUDIO_HOST ?? '127.0.0.1';
 const port = Number(process.env.HAN_AI_STUDIO_PORT ?? 5173);
 const dataDirectory = resolve(process.env.HAN_AI_STUDIO_DATA_DIR ?? 'var');
 const databasePath = resolve(dataDirectory, 'studio.sqlite');
+const providerMode = process.env.HAN_AI_STUDIO_PROVIDER_MODE === 'none' ? 'none' : 'mock';
 
-const studio = await startStudioServer({ dev, host, port, databasePath });
+const studio = await startStudioServer({ dev, host, port, databasePath, providerMode });
 console.log(`HAN's AI STUDIO ${dev ? 'development' : 'production'} server running at http://${host}:${port}`);
 console.log(`Workspace database: ${databasePath}`);
+console.log(`Provider mode: ${providerMode === 'mock' ? 'Mock test backend' : 'No executable provider'}`);
 
 let closing = false;
 async function close(): Promise<void> {

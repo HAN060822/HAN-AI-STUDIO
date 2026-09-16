@@ -63,6 +63,18 @@ Capabilities and role summaries are intentionally lightweight: **CAPABILITY ≠ 
 
 No provider SDK, network request, API key, OAuth flow, server route, model selector, streaming contract, tool call, Task assignment, permission grant, or execution record is introduced. Real/mock adapter implementations and server-side secret handling are Stage 6 or later concerns.
 
+## Stage 6 executable intelligence boundary
+
+Stage 6 implements **UI → Application → Adapter → Provider** through same-origin Agent routes and `AgentInvocationService`. The service resolves the persistent Agent, applies an explicit runtime binding, resolves an executable adapter, validates configuration/availability, executes a normalized request, validates the response, and returns machine-readable Agent, Provider, Model, mode, and success metadata.
+
+The default Prototype configuration binds `agent-gpt` to `mock` / `mock-basic` without changing its identity or Stage 5 production status. **Mock Provider ≠ Fake Agent.** Results are deterministic and visibly marked Mock. `HAN_AI_STUDIO_PROVIDER_MODE=none` disables the executable test target; there is **NO SILENT FALLBACK** from a real provider to Mock.
+
+No real adapter was added: the environment has no configured credential and a speculative integration would make normal verification depend on external network, quota, and untested secret handling. Mock uses no secret or network. Provider credentials remain server-only future configuration and never enter browser code or SQLite.
+
+Invocation failures **FAIL HONESTLY**: unknown Agent, unavailable Agent, unconfigured binding, unavailable adapter, provider failure, invalid input, and malformed response have safe application errors. **Provider Connectivity ≠ Agent Permission**; an invocation grants no tool, terminal, repository, filesystem, external-action, approval, or autonomy rights. Task remains separate from invocation and Execution.
+
+Stage 7 inherits the stable Agent Registry, runtime binding seam, adapter resolver, normalized result metadata, safe failure model, and single-Agent invocation service. It does not inherit routing, delegation, collaboration, or orchestration behavior because none is introduced here. **NORMALIZE COMMON, PRESERVE UNIQUE** remains implemented through generic adapter extensions.
+
 Node's built-in SQLite API was selected over an ORM or native package because Node 24 is the repository baseline, it introduces no new dependency or compilation step, and the repository interface keeps the implementation replaceable.
 
 ## Stage 0 decisions
@@ -77,3 +89,5 @@ Node's built-in SQLite API was selected over an ORM or native package because No
 8. Stage 4 cleanup separates retained terminal Tasks from active working views and keeps Task collections compact and bounded; Archive and Delete remain later lifecycle decisions.
 9. Stage 5 defines global Agents in versioned application configuration, not SQLite, because no user-owned Agent lifecycle exists yet.
 10. Stage 5 exposes unavailable adapter descriptors and contracts only; provider execution remains a Stage 6 concern.
+11. Stage 6 uses a deterministic Mock adapter as the credential-free executable default and keeps real providers explicitly unavailable.
+12. Stage 6 keeps invocation transient and server-side; it adds neither SQLite migration nor execution history.
