@@ -1,10 +1,11 @@
 # HAN's AI STUDIO — Build State
 
 - **Current Version:** 0.0.0
-- **Current Stage:** Stage 6 — Provider Integration
-- **Stage Status:** Complete — awaiting HAN's review
-- **Latest Completed Stage:** Stage 6 — Provider Integration
-- **Latest Git Commit:** `HEAD` — Complete Phase 9 Stage 6 provider integration
+- **Current Stage:** Stage 7 — Orchestrator + Collaboration
+- **Stage Status:** Builder complete — awaiting HAN + ChatGPT review and HAN hands-on verification
+- **Latest Completed Stage:** Stage 7 — Orchestrator + Collaboration (builder verification complete; not sealed)
+- **Latest Git Commit:** `HEAD` — Complete Phase 9 Stage 7 orchestrator and collaboration
+- **Baseline Commit:** `4fad012628d68a00f213e3b708144c45d9f6ee16` — synchronized `main` / `origin/main`, clean before Stage 7
 - **Working Branch:** `main`
 
 ## What Works
@@ -25,15 +26,21 @@
 - A global, configuration-backed Agent Registry exposes the stable GPT, Gemini, and Codex AI Studio identities, machine-readable capability metadata, honest availability, and inspectable provider bindings.
 - The Home AI Team renders from the Agent Registry and reports providers as not connected; the former simulated Working/Waiting presentation is removed.
 - A Provider Adapter contract, normalized request/response types, and descriptor/adapter resolver establish the Stage 6 boundary without making provider calls.
-- A server-side Agent invocation service resolves `agent-gpt` through an explicit Mock test binding and executable deterministic Mock adapter, returning normalized Agent/Provider/Model/mode/status metadata.
+- A server-side Agent invocation service resolves `agent-gpt` and `agent-gemini` through explicit Mock test bindings and one executable deterministic Mock adapter, returning normalized Agent/Provider/Model/mode/status metadata without changing production availability.
 - Home includes a small Prototype test invocation surface whose results are unmistakably marked `MOCK · TEST OUTPUT`; it does not mutate Chat, Task, or Agent production availability.
 - Projects, Knowledge, Assets, and History remain explicit later-stage placeholders.
 - Persistence and validation failures surface without pretending a write succeeded.
+- A deterministic Orchestrator coordinates only explicitly selected Agent identities through `AgentInvocationService`, with bounded ordered plans and an injectable future planning seam.
+- Sequential collaboration supports one to three distinct selected Agents; Review / Challenge supports a primary contributor and one explicit reviewer. The normal Prototype config exposes GPT and Gemini, not Codex, as Mock test participants.
+- Structured handoffs carry source/target identity, original goal, an at-most-800-character prior-contribution excerpt with truncation metadata, and the next action; they never automatically access Chat history.
+- Home's dedicated Prototype Collaboration surface displays ordered, attributed contributions and final output with clear Mock/test labels. Honest preflight/step failures preserve earlier contributions without substitution or fallback.
 
 ## Incomplete Work
 
-- Real provider integration, orchestration, execution runtime, artifacts, knowledge, connectors, and all later-stage Prototype 0 features (Stages 7–14).
-- AI-generated replies, provider/model execution, Agent assignment, message deletion, chat archive/delete, and cross-workspace move/copy are intentionally not implemented.
+- Real provider integration, execution runtime, artifacts, knowledge, connectors, and later-stage Prototype 0 features (Stages 8–14).
+- Real AI-generated Chat replies, real-provider inference, Task Agent assignment, message deletion, chat archive/delete, and cross-workspace move/copy are intentionally not implemented.
+- Parallel collaboration, intelligent planning/convergence, durable collaboration history, and final multi-Agent Chat UX are deferred. Mock echo output proves routing/context/provenance, not intelligence or semantic agreement.
+- Collaboration goal limit is 500 characters; previous contribution handoff limit is 800 characters and truncation may omit trailing context. Results are transient and disappear on refresh or Home unmount.
 
 ## Known Errors
 
@@ -41,9 +48,12 @@
 
 ## Tests Status
 
-- `npm test`: passed (12 test files, 35 tests) with no React `act(...)` warnings, including deterministic Mock execution, normalized metadata, binding resolution, honest failure cases, no silent fallback, UI invocation, and all Stage 1–5 regressions.
+- `npm.cmd test`: passed (15 test files, 73 tests) with no React `act(...)` warnings. Includes 37 new deterministic orchestration/UI/HTTP cases plus all 36 existing Stage 1–6 regression tests.
 - `npm run build`: passed (strict browser/server TypeScript checks and Vite production bundle).
-- `npm run dev`: combined local runtime and Vite server started successfully; HTTP smoke check returned 200.
+- Exact `npm.cmd run dev`: combined local runtime and Vite server started on `127.0.0.1:5173` with Mock test backend. A pre-existing old watcher initially occupied the port; it was identified and stopped before testing the current startup path.
+- Real-browser Stage 7 smoke passed: production Agent identities/status, single-Agent invocation, Sequential GPT → Gemini, Review / Challenge with visible handoff, attributed final `MOCK · TEST OUTPUT`, usable form and result layout.
+- Workspace/Chat/human message/Task creation and Active/Closed separation passed in `Stage 7 smoke verification`. Browser refresh and full dev-server restart retained the human data; collaboration ran again after restart. Browser error/warning log was empty. Smoke data is only in ignored `var/studio.sqlite`; existing Workspaces were not modified.
+- `git diff --check`: passed; no runtime database, secret, generated build output, or dependency change is included in the Stage 7 commit.
 - Real API and 12-Task UI smoke verification passed for Workspace, Chat, Message, and Task data, including stable Task identity, active/closed classification, goal/state, and optional source Chat relation across refresh and runtime restart.
 - `npm ci`: clean lockfile install completed during Stage 0; npm audit reported 0 vulnerabilities.
 
@@ -53,7 +63,7 @@
 - Node 24 built-in `node:sqlite` is used behind `WorkspaceRepository`; mutable data defaults to ignored `var/studio.sqlite`.
 - Providers use adapters; Obsidian and external systems use connectors.
 - Desktop wrapper selection remains deliberately deferred; the SQLite implementation is now fixed to Node 24's built-in API behind the repository port.
-- Stage 1 uses presentational, static agent identities and locally simulated presence; these remain conceptually separate from later provider and model implementations.
+- Stage 1's original simulated presence was replaced by honest registry-backed production availability in Stage 5; Mock calls never change that status.
 - The browser calls same-origin local `/api/workspaces` and workspace-scoped conversation boundaries; it never opens SQLite or issues SQL.
 - Numbered, transactional migrations are recorded in `schema_migrations`; non-destructive Migration 3 adds `tasks` with restrictive Workspace and optional Chat foreign keys and deterministic indexes.
 - Open/close selection is transient UI navigation; the Workspace domain itself is durable. Archive is non-destructive and delete is not implemented.
@@ -75,6 +85,13 @@
 - **Provider Connectivity ≠ Agent Permission:** successful Mock invocation grants no terminal, repository, filesystem, external-action, or autonomous Task authority.
 - **UI → Application → Adapter → Provider:** React calls only the same-origin API; `AgentInvocationService` owns resolution and validation behind the server boundary.
 - **FAIL HONESTLY** and **NO SILENT FALLBACK:** unknown/unavailable/unconfigured/malformed/failed cases return safe normalized errors; real configuration never silently substitutes Mock.
+- **ORCHESTRATOR ≠ AGENT ≠ PROVIDER ROUTER:** orchestration depends on an Agent invocation port and a plan builder, never provider implementations.
+- **MINIMUM SUFFICIENT COLLABORATION:** only explicit participants run once, in order; one-Agent and multi-Agent plans share the same abstraction.
+- **HANDOFF ≠ CONTEXT DUMP:** bounded immediate contribution context, no Chat transcript import or hidden reasoning trace.
+- **SHOW CONTRIBUTIONS; HIDE COORDINATION NOISE:** identity/backend provenance and final ownership are visible; handoff details are optional disclosure.
+- **CollaborationPlan ≠ Workflow; Task ≠ Collaboration ≠ Execution.** Structural convergence only; no Execution Runtime, workflow engine, autonomous loops, or new authority.
+- **Mock collaboration ≠ real provider connectivity.** Chat and Task schemas/services stay unchanged. Collaboration is transient; **No Migration 4**.
+- The explicit Stage 7 handoff supersedes the broader older `BUILD-PLAN.md` wording about Task context, persisted decisions, and progress; those are not implemented here. Stage 8 may wrap orchestration later, only with explicit authorization.
 
 ## Changed Interfaces
 
@@ -90,10 +107,12 @@
 - Stage 6 adds `GET /api/agents/invocation-targets` and `POST /api/agents/:agentId/invoke`. `HAN_AI_STUDIO_PROVIDER_MODE` is `mock` by default or `none`; it contains no secret.
 - Development startup watches `src/server` so API route/composition changes restart alongside Vite client hot reload without watching Vite-generated files; unknown `/api/*` requests return JSON 404 rather than the SPA document.
 - No real adapter was implemented because no provider credential/configuration exists and Stage 6 completion must not depend on network or quota. No Provider SDK dependency was added.
+- Stage 7 adds `POST /api/collaborations` with typed request/plan/handoff/result contracts; HTTP 400 is request validation, while HTTP 200 carries an explicit succeeded/failed collaboration result. No history endpoint or persistence is added.
+- `AgentInvocationService.assertInvokable()` shares existing resolution checks for orchestration preflight; malformed output/backend-mode validation is hardened and unconfigured bindings are excluded from target discovery.
 
 ## Uncommitted Work
 
-- None after the Stage 4 commit.
+- None after the Stage 7 commit. No push performed; local `main` is one Stage 7 commit ahead of the sealed Stage 6 baseline.
 
 ## Blockers
 
@@ -101,7 +120,7 @@
 
 ## Next Exact Action
 
-HAN and architecture review Stage 6. After explicit authorization only, begin Stage 7 — Orchestrator + Collaboration by reading this file and `BUILD-PLAN.md`; do not start it automatically.
+STOP for HAN + ChatGPT Stage 7 architecture/functional review and HAN hands-on verification. Do not push. Do not begin Stage 8 without explicit authorization.
 
 ## Relevant Architecture Documents
 
@@ -111,6 +130,6 @@ HAN and architecture review Stage 6. After explicit authorization only, begin St
 
 ## Stage Gate
 
-- **Current Stage:** Stage 6 — Provider Integration
-- **Stage Status:** Complete
-- **Stage 7:** NOT started
+- **Current Stage:** Stage 7 — Orchestrator + Collaboration
+- **Stage Status:** Builder complete — awaiting review; not sealed
+- **Stage 8:** NOT started

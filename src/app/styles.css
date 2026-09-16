@@ -56,3 +56,15 @@ button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visib
 
 .agent-invocation { display: grid; grid-template-columns: minmax(12rem, .8fr) minmax(18rem, 1.2fr); gap: 1rem 1.5rem; margin-top: 1rem; padding: 1rem; border: 1px solid #ddd7e9; border-radius: .8rem; background: #faf9fd; }.agent-invocation h3, .agent-invocation p { margin: 0 0 .4rem; }.agent-invocation form { display: grid; grid-template-columns: auto 1fr; gap: .45rem .65rem; align-items: center; }.agent-invocation input, .agent-invocation select { min-width: 0; padding: .52rem; border: 1px solid #d9d2e5; border-radius: .45rem; background: #fff; }.agent-invocation button { grid-column: 2; justify-self: start; padding: .5rem .7rem; }.agent-result { grid-column: 1 / -1; padding: .8rem; border-left: 3px solid #8a6fd1; background: #f0ebfc; }.agent-result strong { color: #6049a1; font-size: .68rem; }.agent-result small { color: #716a7a; }.agent-invocation [role="alert"] { color: #9a3544; }
 @media (max-width: 650px) { .agent-invocation { grid-template-columns: 1fr; }.agent-result { grid-column: 1; }.agent-invocation form { grid-template-columns: 1fr; }.agent-invocation button { grid-column: 1; } }
+
+.collaboration-panel { padding: 1.25rem; border: 1px solid #ddd7e9; border-radius: .8rem; background: #faf9fd; }
+.collaboration-panel fieldset { display: grid; gap: .65rem; min-width: 0; margin-top: 1rem; border: 1px solid #ddd7e9; border-radius: .5rem; padding: 1rem; }
+.collaboration-panel textarea, .collaboration-panel select { width: 100%; min-width: 0; padding: .6rem; border: 1px solid #d9d2e5; border-radius: .45rem; background: white; }
+.collaboration-panel button { justify-self: start; padding: .55rem .85rem; }
+.collaboration-participants { display: flex; flex-wrap: wrap; gap: .8rem; }
+.collaboration-participants label { display: flex; align-items: center; gap: .35rem; }
+.collaboration-result article { margin-top: 1rem; padding: 1rem; border-left: 3px solid #8a6fd1; background: #f0ebfc; }
+.collaboration-result strong { color: #6049a1; }
+.collaboration-result details { margin-top: .8rem; }
+.collaboration-output { white-space: pre-wrap; overflow-wrap: anywhere; max-height: 18rem; overflow-y: auto; }
+.collaboration-panel [role="alert"] { color: #9a3544; }

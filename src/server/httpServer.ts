@@ -6,6 +6,8 @@ import { URL } from 'node:url';
 import { MockProviderAdapter, MOCK_MODEL_ID } from '../adapters/mock/mockProviderAdapter.ts';
 import { AgentInvocationError, AgentInvocationService } from '../application/agents/agentInvocationService.ts';
 import { initialAgentRegistry } from '../application/agents/initialAgentRegistry.ts';
+import { OrchestratorService } from '../application/collaboration/orchestratorService.ts';
+import { CollaborationValidationError } from '../core/collaboration/collaboration.ts';
 import { ChatNotFoundError, ChatWorkspaceMismatchError, ConversationService, ConversationWorkspaceNotFoundError } from '../application/conversations/conversationService.ts';
 import { initialProviderAdapterRegistry } from '../application/providers/initialProviderAdapterRegistry.ts';
 import { ProviderAdapterRegistry, type ProviderAdapterRegistration } from '../application/providers/providerAdapterRegistry.ts';
@@ -88,6 +90,18 @@ async function handleAgentApi(request: IncomingMessage, response: ServerResponse
 
 function stringOrNull(value: unknown): string | null | undefined {
   return typeof value === 'string' || value === null ? value : undefined;
+}
+
+async function handleCollaborationApi(request: IncomingMessage, response: ServerResponse, service: OrchestratorService, url: URL): Promise<boolean> {
+  if (url.pathname !== '/api/collaborations') return false;
+  if (request.method !== 'POST') { sendJson(response, 405, { error: 'Use POST to request collaboration.' }); return true; }
+  try {
+    sendJson(response, 200, { result: await service.collaborate(await readJson(request)) });
+  } catch (error) {
+    if (error instanceof CollaborationValidationError || error instanceof WorkspaceValidationError) sendJson(response, 400, { error: error.message, code: error instanceof CollaborationValidationError ? error.code : 'invalid_request' });
+    else sendJson(response, 500, { error: 'Collaboration is unavailable.', code: 'collaboration_unavailable' });
+  }
+  return true;
 }
 
 async function handleConversationApi(request: IncomingMessage, response: ServerResponse, service: ConversationService, url: URL): Promise<boolean> {
@@ -273,8 +287,10 @@ export async function startStudioServer(options: StudioServerOptions) {
     const mock = new MockProviderAdapter();
     registrations.push({ descriptor: mock.descriptor, adapter: mock });
     bindings.set('agent-gpt', { providerId: 'mock', adapterId: 'mock', modelId: MOCK_MODEL_ID, status: 'configured' });
+    bindings.set('agent-gemini', { providerId: 'mock', adapterId: 'mock', modelId: MOCK_MODEL_ID, status: 'configured' });
   }
   const agentInvocationService = new AgentInvocationService(initialAgentRegistry, new ProviderAdapterRegistry(registrations), bindings);
+  const orchestrator = new OrchestratorService(agentInvocationService);
   const vite = options.dev
     ? await (await import('vite')).createServer({ server: { middlewareMode: true }, appType: 'spa' })
     : null;
@@ -282,6 +298,7 @@ export async function startStudioServer(options: StudioServerOptions) {
   const server = createServer(async (request, response) => {
     const url = new URL(request.url ?? '/', `http://${request.headers.host ?? 'localhost'}`);
     if (await handleAgentApi(request, response, agentInvocationService, url)) return;
+    if (await handleCollaborationApi(request, response, orchestrator, url)) return;
     if (await handleTaskApi(request, response, taskService, url)) return;
     if (await handleConversationApi(request, response, conversationService, url)) return;
     if (await handleWorkspaceApi(request, response, workspaceService, url)) return;

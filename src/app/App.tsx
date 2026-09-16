@@ -1,5 +1,6 @@
 import { type FormEvent, useState } from 'react';
 import { AgentTeam } from './agents/AgentTeam';
+import { CollaborationPanel } from './collaboration/CollaborationPanel';
 import { WorkspaceSection } from './workspaces/WorkspaceSection';
 import { WorkspaceView } from './workspaces/WorkspaceView';
 import { useWorkspaces } from './workspaces/useWorkspaces';
@@ -65,6 +66,7 @@ export function App() {
           </section>
 
           <AgentTeam />
+          <CollaborationPanel />
 
           <div className="content-grid">
             <WorkspaceSection controller={workspaceController} onOpen={(workspace) => setOpenWorkspaceId(workspace.id)} />

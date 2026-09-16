@@ -158,7 +158,8 @@ describe('AI World Lobby', () => {
       return workingFetch(input, init);
     }));
     render(<App />);
-    expect(await screen.findByRole('alert')).toHaveTextContent(/mock test backend could not be loaded/i);
+    expect(await within(screen.getByLabelText('Agent Invocation')).findByRole('alert')).toHaveTextContent(/mock test backend could not be loaded/i);
+    expect(await within(screen.getByRole('region', { name: 'Prototype Collaboration' })).findByRole('alert')).toHaveTextContent(/collaboration test Agents could not be loaded/i);
     expect(screen.getByRole('button', { name: /try again/i })).toBeInTheDocument();
   });
 

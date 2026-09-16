@@ -32,26 +32,35 @@ export class AgentInvocationService {
     return [...this.bindings.entries()].flatMap(([agentId, binding]) => {
       const agent = this.agents.resolve(agentId);
       const descriptor = this.adapters.resolveDescriptor(binding.adapterId);
-      if (!agent || !descriptor || descriptor.availability !== 'available' || !binding.modelId || !this.adapters.resolve(binding.adapterId)) return [];
+      if (!agent || !descriptor || descriptor.availability !== 'available' || binding.status !== 'configured' || !binding.modelId || !this.adapters.resolve(binding.adapterId)) return [];
       return [{ agentId, displayName: agent.displayName, backendMode: descriptor.providerId === 'mock' ? 'mock' : 'real', providerId: descriptor.providerId, modelId: binding.modelId }];
     });
   }
 
-  async invoke(agentId: string, input: string): Promise<AgentInvocationResult> {
+  assertInvokable(agentId: string): void {
+    this.resolveInvocation(agentId);
+  }
+
+  private resolveInvocation(agentId: string) {
     const agent = this.agents.resolve(agentId);
     if (!agent) throw new UnknownAgentError();
-    const normalizedInput = input.trim();
-    if (!normalizedInput || normalizedInput.length > 2000) throw new InvalidAgentInputError();
     const binding = this.bindings.get(agent.id);
     if (!binding) throw new AgentUnavailableError();
     if (binding.status !== 'configured' || !binding.modelId) throw new BindingUnconfiguredError();
     const descriptor = this.adapters.resolveDescriptor(binding.adapterId);
     const adapter = this.adapters.resolve(binding.adapterId);
     if (!descriptor || descriptor.availability !== 'available' || !adapter) throw new AdapterUnavailableError();
+    return { agent, binding, adapter };
+  }
+
+  async invoke(agentId: string, input: string): Promise<AgentInvocationResult> {
+    const { agent, binding, adapter } = this.resolveInvocation(agentId);
+    const normalizedInput = input.trim();
+    if (!normalizedInput || normalizedInput.length > 2000) throw new InvalidAgentInputError();
     let response: ProviderResponse<unknown>;
     try { response = await adapter.execute({ agentId: agent.id, input: normalizedInput }); }
     catch { throw new ProviderRequestFailedError(); }
-    if (response.agentId !== agent.id || response.providerId !== binding.providerId || response.modelId !== binding.modelId || response.status !== 'succeeded' || !response.output.trim()) throw new MalformedProviderResponseError();
+    if (!response || response.agentId !== agent.id || response.providerId !== binding.providerId || response.modelId !== binding.modelId || response.mode !== (binding.providerId === 'mock' ? 'mock' : 'real') || response.status !== 'succeeded' || typeof response.output !== 'string' || !response.output.trim()) throw new MalformedProviderResponseError();
     return { agentId: agent.id, agentDisplayName: agent.displayName, providerId: response.providerId, modelId: response.modelId, mode: response.mode, status: response.status, output: response.output };
   }
 }
