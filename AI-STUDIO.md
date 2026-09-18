@@ -779,64 +779,43 @@ Adopt selectively.
 
 Automate carefully.
 
-## Shared Knowledge Base — Research Question
+## Shared Knowledge Base — Selected Architecture
 
-HAN's AI Studio currently relies heavily on HAN manually transferring important information between AI agents.
+HAN's AI Studio originally relied heavily on HAN manually transferring important information between AI agents. That manual pattern remains useful for review, but it is no longer the intended permanent knowledge architecture.
 
-Current pattern:
+**Selected durable knowledge layer: Obsidian / Markdown.**
 
-Gemini
+Obsidian is the current external Knowledge Source of Truth for structured long-term knowledge, research, Skills, architecture notes, learning records, and reusable project knowledge. GitHub remains the Engineering Source of Truth for source code, engineering state, build plans, architecture baselines, verification records, and implementation specifications.
 
-→ HAN
+Current knowledge architecture:
 
-→ ChatGPT
+HAN / Agents
+↕
+HAN Knowledge Governance + Context Loading
+↕
+Obsidian / Markdown — durable knowledge
+↕
+RAG / search indexes — rebuildable retrieval infrastructure
 
-ChatGPT
+The Stage 10 Knowledge Connector already establishes an explicit reviewed export boundary into Obsidian. Future RAG, vector search, APIs, MCP access, and cross-agent retrieval should extend this architecture rather than replace Obsidian as the durable source.
 
-→ HAN
+**Current Status: SELECTED / IMPLEMENTED FIRST BOUNDARY**
 
-→ Codex
+### Hybrid Agent Engine Direction
 
-This works during the early learning stage because HAN remains closely involved in understanding and reviewing information.
+LibreChat has been selected from the 2026-09-18 architecture harvest as a candidate replaceable self-hosted Agent Engine beneath HAN-owned domain, Harness, knowledge-governance, and Experience layers.
 
-The long-term objective is to create a Shared Knowledge Base that multiple AI agents can access.
+Target direction:
 
-Future architecture:
+HAN Experience
+→ HAN Harness
+→ HAN Engine Adapter
+→ LibreChat Engine
+→ Models / MCP Tools / RAG Infrastructure
 
-HAN
+LibreChat does not become HAN's application identity, Knowledge Source of Truth, or UI shell. Existing persistent Agent identities, Tasks, Executions, Artifacts, Knowledge boundaries, and Obsidian governance remain HAN-owned. Engine integration must occur through an adapter/API boundary and must pass the later Stage 11 security gate and Stage 12 integration proof before becoming part of the sealed Prototype 0 baseline.
 
-→ ChatGPT
-
-→ Gemini
-
-→ Codex
-
-↕ Shared Knowledge Base
-
-The Shared Knowledge Base should potentially support:
-
-* Long-term system knowledge
-* University notes
-* AI Studio documentation
-* Project knowledge
-* Agent context
-* Research outputs
-* Reusable instructions
-* Cross-agent information retrieval
-
-Potential technologies and platforms to evaluate later include:
-
-* Obsidian
-* GitHub
-* Google Drive
-* Databases
-* RAG systems
-* APIs
-* MCP-based access
-
-**Current Status: RESEARCH / DESIGN QUESTION**
-
-No permanent platform has been selected yet.
+The long-term HAN Experience layer includes project workspaces, Agent identity, Activity/Trace, Artifacts, a dedicated Design Workspace, and a future 3D Lobby.
 
 ## Three-Agent Division of Labour
 

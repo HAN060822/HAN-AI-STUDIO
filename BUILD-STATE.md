@@ -2,11 +2,12 @@
 
 - **Current Version:** 0.0.0
 - **Current Stage:** Stage 10 — Knowledge Interface + Obsidian Connector
-- **Stage Status:** Builder complete — automated and builder browser/real-vault verification passed; awaiting Architect review and HAN acceptance; NOT PUSHED / NOT SEALED
+- **Stage Status:** Builder complete — automated and builder browser/real-vault verification passed; awaiting Architect review and HAN acceptance; this builder baseline is being synchronized with the approved architecture-documentation update; NOT SEALED
 - **Latest Completed Stage:** Stage 10 (builder complete); latest independently sealed stage is Stage 9
-- **Latest Git Commit:** `HEAD` — Complete Phase 9 Stage 10 knowledge and Obsidian connector (this handoff is included in that commit; obtain exact hash with `git rev-parse HEAD`)
+- **Latest Git Commit:** `HEAD` — approved LibreChat Hybrid Engine architecture/roadmap alignment on top of the Stage 10 builder baseline; obtain exact hash with `git rev-parse HEAD`
 - **Baseline Commit:** `a0d41c9866f982ca70ed7aa3e8a1734e3d0fce9a` — Stage 9 PASS / HANDS-ON PASS / INDEPENDENT VERIFIED / PUSHED / SEALED; synchronized `main` / `origin/main`, clean before Stage 10
 - **Working Branch:** `main`
+- **Planned Engine Direction (not implemented):** 2026-09-18 LibreChat Harvest selected a Hybrid Engine direction for later validation: preserve HAN-owned domain/Harness/Knowledge/Experience boundaries and test LibreChat only through a replaceable adapter/API boundary. This does not change the current Stage 10 gate or claim Stage 11/12 implementation.
 
 ## What Works
 
@@ -172,5 +173,5 @@ STOP for HAN + ChatGPT Stage 10 architecture/functional review and HAN acceptanc
 ## Stage Gate
 
 - **Current Stage:** Stage 10 — Knowledge Interface + Obsidian Connector
-- **Stage Status:** Builder complete — awaiting Architect review and HAN acceptance; NOT PUSHED / NOT SEALED
+- **Stage Status:** Builder complete — awaiting Architect review and HAN acceptance; builder baseline synchronized with approved architecture documentation; NOT SEALED
 - **Stage 11:** NOT STARTED

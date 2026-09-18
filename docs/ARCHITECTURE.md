@@ -219,3 +219,41 @@ See `docs/STAGE-10-VERIFICATION.md` for reproducible tests, the single-note real
 10. Stage 5 exposes unavailable adapter descriptors and contracts only; provider execution remains a Stage 6 concern.
 11. Stage 6 uses a deterministic Mock adapter as the credential-free executable default and keeps real providers explicitly unavailable.
 12. Stage 6 keeps invocation transient and server-side; it adds neither SQLite migration nor execution history.
+
+
+## Planned Hybrid Agent Engine Boundary (Stage 12 candidate)
+
+The 2026-09-18 LibreChat architecture harvest changes the planned implementation strategy for generic agent infrastructure without changing the implemented Stage 0–10 domain boundaries.
+
+**Current implemented boundary:**
+
+```text
+HAN domain/application
+  → AgentInvocationService
+  → ProviderAdapter
+  → current Mock / future provider backend
+```
+
+**Planned Stage 12 validation boundary:**
+
+```text
+HAN Experience / Domain
+  → HAN Harness
+  → replaceable EngineAdapter
+  → LibreChatAdapter
+  → self-hosted LibreChat Engine
+  → model providers / MCP tools / RAG infrastructure
+```
+
+LibreChat is an engine candidate, not the HAN application shell. The following rules are architectural constraints for the prototype:
+
+- Persistent HAN Agent identity remains separate from Provider, Model, and engine implementation.
+- Task, Collaboration, Execution, Artifact, Task Report, Conversation, and Knowledge retain their existing HAN domain meanings.
+- Obsidian/Markdown remains the durable external Knowledge Source of Truth. LibreChat Memory, RAG, pgvector, and search indexes are operational/retrieval layers, not replacements for that source.
+- HAN application/domain code must not depend directly on LibreChat MongoDB or other internal persistence schemas.
+- Engine integration should use the smallest stable API/adapter surface and remain replaceable.
+- Model-provider, MCP/tool, telemetry, and other outbound data flows are governed by Stage 11 permissions/secrets/audit and an explicit data-egress policy.
+- LibreChat HITL, checkpoint, background, event, skill, MCP, memory, RAG, provider, logging, and deployment primitives may be adopted where they reduce duplicated generic infrastructure, but HAN owns goals, context-loading policy, knowledge governance, evaluation, recovery policy, routing, Agent permissions, projects, Design, Activity interpretation, and product experience.
+- The existing local runtime remains authoritative until the Stage 12 integration proof is implemented, verified, reviewed, and accepted. This section describes planned architecture, not current capability.
+
+The Stage 12 proof must cover one Agent invocation, one controlled MCP/tool call, minimal HAN-controlled RAG retrieval, attributed minimum-sufficient context, local latency/token/cost telemetry, trace mapping, and documented data egress. Stage 13 then exercises recovery across that selected engine boundary.

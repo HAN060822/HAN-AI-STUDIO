@@ -48,16 +48,16 @@ Add approved-knowledge records and connector ports; implement preview/approve/ex
 
 ## Stage 11 — Permissions + Secrets + Audit
 
-Add explicit capabilities, local secret references, approvals, audit events, and redaction. **Exit:** privileged actions are attributable and denied unless granted.
+Add explicit capabilities, local secret references, approvals, audit events, and redaction. Define the security boundary for later engine integration: HAN-to-engine credentials, model-provider/API secret ownership, MCP/tool permissions, local-first data-egress policy, and Human Director approval mapping. **Exit:** privileged actions are attributable and denied unless granted; future engine/tool connections have an explicit permission, secret, approval, and egress boundary.
 
-## Stage 12 — Context + Usage Telemetry
+## Stage 12 — Context, Telemetry + Engine Integration
 
-Add budgeted, attributed minimum-sufficient context and local latency/token/cost telemetry without leaking content. **Exit:** execution context inputs and provider usage are inspectable.
+Add budgeted, attributed minimum-sufficient context and local latency/token/cost telemetry without leaking content. Introduce a replaceable HAN Engine Adapter and validate an isolated self-hosted LibreChat integration with one Agent invocation, one controlled MCP/tool call, minimal HAN-controlled RAG retrieval, trace mapping, and documented data egress. Preserve Obsidian as the Knowledge Source of Truth and avoid direct HAN coupling to LibreChat internal persistence. **Exit:** execution context inputs and provider usage are inspectable, and the LibreChat engine boundary is proven or explicitly rejected from evidence.
 
 ## Stage 13 — End-to-End Integration & Recovery
 
-Exercise the complete loop; add restart/crash recovery, migration backup, corrupt-state handling, cancellation preservation, and E2E tests. **Exit:** main and recovery paths pass from clean and existing data.
+Exercise the complete loop across the selected engine boundary; add restart/crash recovery, migration backup, corrupt-state handling, cancellation preservation, engine/provider/MCP/RAG failure handling, and E2E tests. Preserve useful committed work and avoid silent replay of uncertain external actions. **Exit:** main and recovery paths pass from clean and existing data, including bounded engine failure cases.
 
 ## Stage 14 — Prototype 0 Release Candidate
 
-Freeze scope; audit accessibility, privacy, dependencies, docs, install/update/backup flows, and release artifacts. Reassess desktop wrapper using validated needs. **Exit:** reproducible tagged candidate with limitations and acceptance record.
+Freeze scope; audit accessibility, privacy, dependencies, docs, install/update/backup flows, and release artifacts. If LibreChat remains selected, pin and document its version/license, reproduce the local deployment, verify data-egress/telemetry defaults, review dependency/security/update procedure, and confirm the engine remains replaceable. Reassess desktop wrapper using validated needs. **Exit:** reproducible tagged candidate with limitations and acceptance record.
