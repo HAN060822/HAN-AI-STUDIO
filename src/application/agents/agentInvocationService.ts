@@ -2,9 +2,14 @@ import type { AgentId } from '../../core/agents/agent.ts';
 import type { ProviderBinding, ProviderResponse } from '../../core/providers/provider.ts';
 import type { AgentRegistry } from './agentRegistry.ts';
 import type { ProviderAdapterRegistry } from '../providers/providerAdapterRegistry.ts';
+import { randomUUID } from 'node:crypto';
+import { directContext, validateContext } from '../context/contextAssembler.ts';
+import type { ContextPackage } from '../../core/context/context.ts';
+import { normalizeUsage, unavailableUsage, type InvocationMeasurement, type TelemetryRecord } from '../../core/telemetry/telemetry.ts';
+import type { TelemetryRepository } from '../telemetry/telemetryRepository.ts';
 
 export type AgentInvocationTarget = Readonly<{ agentId: AgentId; displayName: string; backendMode: 'mock' | 'real'; providerId: string; modelId: string }>;
-export type AgentInvocationResult = Readonly<{ agentId: AgentId; agentDisplayName: string; providerId: string; modelId: string; mode: 'mock' | 'real'; status: 'succeeded'; output: string }>;
+export type AgentInvocationResult = Readonly<{ agentId: AgentId; agentDisplayName: string; providerId: string; modelId: string; mode: 'mock' | 'real'; status: 'succeeded'; output: string; measurement?: InvocationMeasurement }>;
 
 export class AgentInvocationError extends Error {
   readonly code: string;
@@ -22,11 +27,13 @@ export class AgentInvocationService {
   private readonly agents: AgentRegistry;
   private readonly adapters: ProviderAdapterRegistry;
   private readonly bindings: ReadonlyMap<AgentId, ProviderBinding>;
+  private readonly telemetry?: TelemetryRepository;
   constructor(
     agents: AgentRegistry,
     adapters: ProviderAdapterRegistry,
     bindings: ReadonlyMap<AgentId, ProviderBinding>,
-  ) { this.agents = agents; this.adapters = adapters; this.bindings = bindings; }
+    telemetry?: TelemetryRepository,
+  ) { this.agents = agents; this.adapters = adapters; this.bindings = bindings; this.telemetry = telemetry; }
 
   listTargets(): readonly AgentInvocationTarget[] {
     return [...this.bindings.entries()].flatMap(([agentId, binding]) => {
@@ -53,14 +60,41 @@ export class AgentInvocationService {
     return { agent, binding, adapter };
   }
 
-  async invoke(agentId: string, input: string): Promise<AgentInvocationResult> {
+  async invoke(agentId: string, input: string, context?: ContextPackage): Promise<AgentInvocationResult> {
     const { agent, binding, adapter } = this.resolveInvocation(agentId);
     const normalizedInput = input.trim();
     if (!normalizedInput || normalizedInput.length > 2000) throw new InvalidAgentInputError();
+    let supplied: ContextPackage;
+    try { supplied = context ?? directContext(normalizedInput); validateContext(supplied, normalizedInput); }
+    catch { throw new AgentInvocationError('invalid_context', 'Context is invalid or exceeds the operation bounds. No provider call was made.'); }
+    const invocationId = randomUUID();
+    const startedAt = new Date().toISOString();
+    const mode = binding.providerId === 'mock' ? 'mock' : 'real';
+    const record: TelemetryRecord = { invocationId, phase: 'started', schemaVersion: 1, agentId: agent.id, providerId: binding.providerId, modelId: binding.modelId!, mode,
+      context: structuredClone(supplied.snapshot), startedAt, completedAt: null, durationMs: null, status: 'started', code: 'ok', usage: unavailableUsage, cost: null };
+    const persist = supplied.snapshot.scope !== null && this.telemetry !== undefined;
+    if (persist) {
+      try { this.telemetry!.append(record); }
+      catch { throw new AgentInvocationError('telemetry_unavailable', 'Invocation telemetry could not be started. No provider call was made; this is not an authority denial.'); }
+    }
+    const start = performance.now();
+    const finish = (status: 'succeeded' | 'failed', code: TelemetryRecord['code'], usage = unavailableUsage): InvocationMeasurement => {
+      const completedAt = new Date().toISOString();
+      const durationMs = Math.max(0, performance.now() - start);
+      let telemetry: InvocationMeasurement['telemetry'] = 'not-recorded';
+      if (persist) {
+        try { this.telemetry!.append({ ...record, phase: 'final', completedAt, durationMs, status, code, usage }); telemetry = 'persisted'; }
+        catch { telemetry = 'unconfirmed'; } // Keep the successful contribution; unmatched start remains honest uncertainty.
+      }
+      return { invocationId, contextId: supplied.snapshot.id, startedAt, completedAt, durationMs, usage, cost: null, telemetry };
+    };
     let response: ProviderResponse<unknown>;
-    try { response = await adapter.execute({ agentId: agent.id, input: normalizedInput }); }
-    catch { throw new ProviderRequestFailedError(); }
-    if (!response || response.agentId !== agent.id || response.providerId !== binding.providerId || response.modelId !== binding.modelId || response.mode !== (binding.providerId === 'mock' ? 'mock' : 'real') || response.status !== 'succeeded' || typeof response.output !== 'string' || !response.output.trim()) throw new MalformedProviderResponseError();
-    return { agentId: agent.id, agentDisplayName: agent.displayName, providerId: response.providerId, modelId: response.modelId, mode: response.mode, status: response.status, output: response.output };
+    try { response = await adapter.execute({ agentId: agent.id, input: normalizedInput, invocationId, contextId: supplied.snapshot.id }); }
+    catch { finish('failed', 'provider_request_failed'); throw new ProviderRequestFailedError(); }
+    if (!response || response.agentId !== agent.id || response.providerId !== binding.providerId || response.modelId !== binding.modelId || response.mode !== mode || response.status !== 'succeeded' || typeof response.output !== 'string' || !response.output.trim()) {
+      finish('failed', 'malformed_provider_response'); throw new MalformedProviderResponseError();
+    }
+    const measurement = finish('succeeded', 'ok', normalizeUsage(response.usage, mode));
+    return { agentId: agent.id, agentDisplayName: agent.displayName, providerId: response.providerId, modelId: response.modelId, mode: response.mode, status: response.status, output: response.output, measurement };
   }
 }

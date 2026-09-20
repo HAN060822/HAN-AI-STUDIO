@@ -21,6 +21,7 @@ import { GovernanceError } from '../core/governance/governance.ts';
 import type { SecretProvider } from '../application/secrets/secretProvider.ts';
 import { EnvironmentSecretProvider } from '../storage/secrets/environmentSecretProvider.ts';
 import { LocalAuthority } from './localAuthority.ts';
+import { SqliteTelemetryRepository } from '../storage/sqlite/sqliteTelemetryRepository.ts';
 import { ExecutionError, isExecutionAction } from '../core/executions/execution.ts';
 import { SqliteExecutionRepository } from '../storage/sqlite/sqliteExecutionRepository.ts';
 import { SqliteOutcomeRepository } from '../storage/sqlite/sqliteOutcomeRepository.ts';
@@ -408,7 +409,8 @@ export async function startStudioServer(options: StudioServerOptions) {
     bindings.set('agent-gpt', { providerId: 'mock', adapterId: 'mock', modelId: MOCK_MODEL_ID, status: 'configured' });
     bindings.set('agent-gemini', { providerId: 'mock', adapterId: 'mock', modelId: MOCK_MODEL_ID, status: 'configured' });
   }
-  const agentInvocationService = new AgentInvocationService(initialAgentRegistry, new ProviderAdapterRegistry(registrations), bindings);
+  const telemetryRepository = new SqliteTelemetryRepository(options.databasePath);
+  const agentInvocationService = new AgentInvocationService(initialAgentRegistry, new ProviderAdapterRegistry(registrations), bindings, telemetryRepository);
   const orchestrator = new OrchestratorService(agentInvocationService);
   const executionRepository = new SqliteExecutionRepository(options.databasePath);
   const executions = new ExecutionService(executionRepository, repository, taskRepository, new LocalExecutionRuntime(orchestrator));
@@ -426,6 +428,19 @@ export async function startStudioServer(options: StudioServerOptions) {
 
   const server = createServer(async (request, response) => {
     const url = new URL(request.url ?? '/', `http://${request.headers.host ?? 'localhost'}`);
+    const telemetryPath = url.pathname.match(/^\/api\/workspaces\/([^/]+)\/executions\/([^/]+)\/telemetry$/);
+    if (telemetryPath) {
+      if (!authority.actor(request)) { sendJson(response, 403, { code: 'permission_denied', error: 'Use the trusted local owner surface.' }); return; }
+      if (request.method !== 'GET') { sendJson(response, 405, { code: 'method_not_allowed', error: 'Telemetry is read-only.' }); return; }
+      try {
+        const workspaceId = decodeURIComponent(telemetryPath[1]); const executionId = decodeURIComponent(telemetryPath[2]);
+        executions.get(workspaceId, executionId);
+        sendJson(response, 200, { records: telemetryRepository.list(workspaceId, executionId) });
+      } catch (error) {
+        sendJson(response, error instanceof URIError ? 400 : error instanceof ExecutionError && error.code === 'not_found' ? 404 : 503, { code: 'telemetry_unavailable', error: 'Telemetry could not be read for this scoped Execution.' });
+      }
+      return;
+    }
     if (url.pathname === '/api/governance/session' || url.pathname === '/api/governance/secrets') {
       if (!authority.actor(request)) sendJson(response, 403, { code: 'permission_denied', error: 'Use the trusted local owner surface.' });
       else if (request.method !== 'GET') sendJson(response, 405, { error: 'Use GET.', code: 'method_not_allowed' });
@@ -472,6 +487,7 @@ export async function startStudioServer(options: StudioServerOptions) {
       outcomeRepository.close();
       knowledgeRepository.close();
       governanceRepository.close();
+      telemetryRepository.close();
     },
   };
 }

@@ -1,4 +1,5 @@
 import type { AgentId } from '../agents/agent.ts';
+import type { Usage } from '../telemetry/telemetry.ts';
 
 export type ProviderId = 'openai' | 'google' | 'codex' | 'mock';
 export type ProviderAdapterId = 'openai' | 'gemini' | 'codex' | 'mock';
@@ -24,6 +25,8 @@ export type ProviderAdapterDescriptor = Readonly<{
 export type ProviderRequest<Extensions = never> = Readonly<{
   agentId: AgentId;
   input: string;
+  invocationId?: string;
+  contextId?: string;
   extensions?: Extensions;
 }>;
 
@@ -34,6 +37,7 @@ export type ProviderResponse<Extensions = never> = Readonly<{
   mode: 'mock' | 'real';
   status: 'succeeded';
   output: string;
+  usage?: Usage;
   extensions?: Extensions;
 }>;
 

@@ -7,6 +7,7 @@ import type { Task } from '../../core/tasks/task';
 import { listInvocationTargets } from '../agents/agentInvocationApi';
 import { taskApi } from '../tasks/taskApi';
 import { executionApi } from './executionApi';
+import { ContextUsageDetails } from './ContextUsageDetails';
 
 export function ExecutionPanel({ workspaceId }: { workspaceId: string }) {
   const [rows, setRows] = useState<Execution[]>([]);
@@ -119,6 +120,7 @@ export function ExecutionPanel({ workspaceId }: { workspaceId: string }) {
         {execution.failure && <p role="alert">{execution.failure.stepId} · {execution.failure.agentId}: {execution.failure.message} ({execution.failure.code})</p>}
         <ol>{execution.checkpoint.contributions.map((item) => <li key={item.stepId}><h4>{item.stepId} · {item.agentDisplayName}</h4><strong>{item.mode === 'mock' ? 'MOCK · TEST CONTRIBUTION' : 'REAL · CONTRIBUTION'}</strong><p className="collaboration-output">{item.output}</p><small>Agent {item.agentId} · Provider {item.providerId} · Model {item.modelId}</small></li>)}</ol>
         {execution.status === 'completed' ? <p>Final contribution: {execution.checkpoint.contributions.at(-1)?.agentDisplayName} · {execution.checkpoint.contributions.at(-1)?.stepId}</p> : <p>No completed final result. Preserved contributions remain available above.</p>}
+        <ContextUsageDetails key={execution.id} execution={execution} />
       </article>}
     </>}
   </section>;

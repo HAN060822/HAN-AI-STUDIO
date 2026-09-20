@@ -6,6 +6,7 @@ import type { TaskRepository } from '../tasks/taskRepository.ts';
 import type { WorkspaceRepository } from '../workspaces/workspaceRepository.ts';
 import type { ExecutionRepository } from './executionRepository.ts';
 import type { ExecutionRuntime } from './executionRuntime.ts';
+import { ContextError } from '../../core/context/context.ts';
 
 export class ExecutionService {
   private readonly repository: ExecutionRepository;
@@ -92,11 +93,12 @@ export class ExecutionService {
       // an uncheckpointed provider call completed, nor silently replay that call.
       execution = this.save({ ...execution, checkpoint: { ...execution.checkpoint, currentStepId: step.id } });
       let contribution;
-      try { contribution = await this.runtime.runNext(execution.plan, execution.checkpoint.contributions); }
+      try { contribution = await this.runtime.runNext(execution.plan, execution.checkpoint.contributions, { workspaceId: execution.workspaceId, taskId: execution.taskId, executionId: execution.id, stepId: step.id }); }
       catch (error) {
         const latest = this.repository.getById(id)!;
+        const contextFailed = error instanceof ContextError;
         const known = error instanceof AgentInvocationError || error instanceof CollaborationValidationError;
-        this.transition({ ...latest, failure: { stepId: step.id, agentId: step.agentId, code: known ? error.code : 'runtime_failed', message: known ? error.message : 'Execution step failed safely.' }, checkpoint: { ...latest.checkpoint, currentStepId: null } }, 'failed');
+        this.transition({ ...latest, failure: { stepId: step.id, agentId: step.agentId, code: contextFailed ? 'invalid_context' : known ? error.code : 'runtime_failed', message: contextFailed || known ? error.message : 'Execution step failed safely.' }, checkpoint: { ...latest.checkpoint, currentStepId: null } }, 'failed');
         return;
       }
       // Read fresh control intent after awaiting; never overwrite a concurrent pause/cancel.

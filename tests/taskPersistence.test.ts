@@ -73,7 +73,7 @@ describe('SQLite Task persistence', () => {
     expect(workspaces.getById('legacy-workspace')?.name).toBe('Legacy');
     expect(conversations.getChatById('legacy-chat')?.title).toBe('Legacy Chat');
     expect(conversations.listMessagesForChat('legacy-chat')[0].content).toBe('Keep me');
-    const versions = new DatabaseSync(path); expect(versions.prepare('SELECT version FROM schema_migrations ORDER BY version').all().map((row) => row.version)).toEqual([1, 2, 3, 4, 5, 6, 7, 8]); versions.close();
+    const versions = new DatabaseSync(path); expect(versions.prepare('SELECT version FROM schema_migrations ORDER BY version').all().map((row) => row.version)).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9]); versions.close();
     tasks.close(); conversations.close(); workspaces.close();
   });
 });

@@ -14,7 +14,10 @@ function service(adapter: ProviderAdapter<unknown, unknown> | null = new MockPro
 describe('Agent invocation service', () => {
   it('executes deterministic Mock requests with machine-readable identity metadata', async () => {
     const invocation = service();
-    expect(await invocation.invoke('agent-gpt', 'Hello')).toEqual(await invocation.invoke('agent-gpt', 'Hello'));
+    const first = await invocation.invoke('agent-gpt', 'Hello'); const second = await invocation.invoke('agent-gpt', 'Hello');
+    expect(first.output).toEqual(second.output); // Output stays deterministic; invocation identity/timing are per call.
+    expect(first.measurement?.usage).toEqual(second.measurement?.usage);
+    expect(first.measurement?.invocationId).not.toBe(second.measurement?.invocationId);
     expect(await invocation.invoke('agent-gpt', 'Hello')).toMatchObject({ agentId: 'agent-gpt', providerId: 'mock', modelId: 'mock-basic', mode: 'mock', status: 'succeeded', output: '[MOCK response for agent-gpt] Hello' });
     expect(initialAgentRegistry.resolve('agent-gpt')?.providerBinding.providerId).toBe('openai');
   });

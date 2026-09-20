@@ -267,7 +267,43 @@ This is not a custom encrypted vault, callback sandbox, memory-zeroization schem
 
 Knowledge's existing review surface displays the decision/reason and disables denied Save/approval controls. Advanced details are collapsed by default and show safe Secret statuses and bounded recent audit, with explicit load failures. Saved Verify remains read-only. No overall UI redesign or permissions dashboard is added.
 
-The approved Hybrid Engine roadmap below remains planning only. Future engine/provider credentials must remain separate server-side references; engines and MCP tools are not HAN actors by default and inherit no grants. Any future data egress/tool consequence must have a HAN-owned explicit scoped intent, destination/payload binding, permission/approval policy and truthful audit before it is connected. Stage 11 does not yet enforce an engine-wide egress policy because no real engine or such egress exists. Stage 12 is NOT STARTED. See `docs/STAGE-11-VERIFICATION.md` for evidence and review points.
+The approved Hybrid Engine roadmap below remains planning only. Future engine/provider credentials must remain separate server-side references; engines and MCP tools are not HAN actors by default and inherit no grants. Any future data egress/tool consequence must have a HAN-owned explicit scoped intent, destination/payload binding, permission/approval policy and truthful audit before it is connected. Stage 11 does not yet enforce an engine-wide egress policy because no real engine or such egress exists. See `docs/STAGE-11-VERIFICATION.md` for Stage 11 evidence and review points; Stage 12's narrower executable contract follows.
+
+## Stage 12 Context + Usage Telemetry
+
+HAN's current handoff supersedes the earlier Stage 12 engine experiment scope: only measurement of the existing Mock path is implemented. No Ponytail, Builder Harness change, EngineAdapter, LibreChat, MCP/RAG or real provider is introduced. The modular monolith and existing runtime/control/authority boundaries remain unchanged.
+
+### Context contract, provenance and isolation
+
+`ContextPackage` pairs transient supplied `input` with a versioned metadata-only `ContextSnapshot`. The assembler formalizes the exact existing Stage 7 prompt: explicit Execution goal, requested action, and only the immediately previous bounded contribution. Direct Home invocation uses explicitly supplied input. Each snapshot has a fresh UUID, SHA-256 input fingerprint, UTF-16 character count, UTF-8 byte count, fixed maximum and operation scope (Workspace, optional Task, Execution, step).
+
+Each item records kind, source type, source ID/step when available, fixed inclusion reason, supplied/reference-only delivery, original/supplied character counts and truncation. Workspace/Task/Execution references describe scope; they do not copy those objects or add their IDs to provider text. Goal provenance points to the immutable Execution goal snapshot, not the mutable Task goal. A handoff points to the source Execution/step. Standalone requests honestly have null durable source IDs.
+
+Bounds remain deterministic: goal ≤500 UTF-16 characters; prior contribution ≤800; requested handoff action ≤180; complete supplied input ≤2,000; snapshot ≤6 items and ≤8 fixed omission labels. Totals include prompt formatting/Agent attribution, so item counts are not a claimed exact sum of the rendered input. Goal/input oversize is rejected rather than silently shortened; existing handoff truncation is explicitly recorded with original size. First-step prior contribution is unavailable. Character counts are not token estimates; a UTF-16 slice can split a Unicode surrogate pair at its boundary, preserving the pre-existing handoff convention.
+
+No repository/connector/Secret provider is reachable from context assembly. Chat history, Knowledge, Obsidian, unrelated Tasks, hidden reasoning, secrets and Audit are explicitly omitted, never automatically fetched. Execution supplies its persisted scope rather than accepting client context/scope metadata. Invocation validation checks the rendered text, fingerprint, sizes, bounded metadata and scope before the adapter can execute. Telemetry storage additionally checks Workspace/Execution ownership, Task linkage and step/Agent identity. This is operation isolation and explicit projection, not content-DLP: user-supplied goal/input and prior public contribution text remain input data, not automatically redacted prose.
+
+### Usage and timing contract
+
+The adapter response may contain normalized `Usage`: source `provider-reported`, `synthetic` or `unavailable`; nullable nonnegative safe-integer input/output/total token counts. Missing, malformed, inconsistent or inappropriate-source usage becomes unavailable. Partial provider counts must explicitly use null; absent totals are not inferred. Unknown is never zero. Extra provider payload fields are not copied. Mock supplies deterministic `ceil(text.length / 4)` input/output counters plus their total, explicitly synthetic test data, NOT a tokenizer or billing estimate. Real mode cannot claim synthetic usage. Monetary cost is always null.
+
+Invocation UUID and context UUID are passed to the existing adapter with the exact assembled input. Results/contributions gain an optional measurement (optional for pre-Stage-12 records/ports), including UTC start/completion, monotonic duration and telemetry confirmation. `durationMs` measures the adapter call plus response validation/normalization; it excludes both telemetry database writes and human pause time. UTC start is captured before the start write, so wall-clock subtraction need not equal the monotonic duration. Backward clock adjustments do not create negative durations.
+
+### Telemetry, persistence and failure policy
+
+`TelemetryRecord` is operational evidence, separate from Stage 11 `AuditEvent` authority evidence. It records invocation/Agent/Provider/Model/backend, scoped context metadata, timestamps, result/safe code, normalized usage and null cost. It stores no prompt, response, title, arbitrary exception, credential-bearing extension or full domain object. Existing Execution checkpoints still retain their prior-stage public contributions; Stage 12 does not duplicate that text into telemetry. Fingerprints reveal input equality and are not anonymization or secret protection.
+
+Additive Migration 9 creates `invocation_telemetry`: ordered start/final snapshots, unique invocation/phase, restrictive Workspace/Execution foreign keys, scoped index and no-update/no-delete triggers. Existing migrations/records are untouched. No historical backfill occurs. At most two events per attempted call and at most three planned steps keep this Prototype bounded; scoped reads cap at 100 events. The triggers are not protection from the local database owner. No event warehouse, rotation or cloud export exists.
+
+For durable Executions, start evidence must persist before the adapter call. Failure prevents the call with `telemetry_unavailable`, an operational failure, not an authority denial. Successful provider output survives final telemetry-write failure with `measurement.telemetry = unconfirmed`; the unmatched start stays visible and no replay occurs. Provider/malformed-response failure appends a safe failed final event when possible, with unknown usage. If that final write also fails, unmatched start remains uncertain while Execution retains its safe failure. Preflight/context failure has no provider attempt to measure and creates no invented telemetry; completed contributions remain intact. A crash between final telemetry and Execution checkpoint may leave truthful provider success without a committed contribution; existing Interrupted/no-replay recovery stays authoritative.
+
+Only workspace-scoped Executions are persisted. Home invocation and standalone collaboration still return transient measurements with `not-recorded`; no durable history is invented for those surfaces. The repository port is injected into the production server composition, not imported by the Orchestrator or runtime domain.
+
+### API and UI
+
+GET `/api/workspaces/:workspaceId/executions/:executionId/telemetry` returns `{ records }`, ordered by append sequence. Existing Stage 11 trusted local-owner checks guard this read-only surface: 403 untrusted origin/context, 405 non-GET, 404 wrong/missing scope, 400 malformed URI, 503 read failure. It does not grant provider, secret, publication or other authority. Existing invocation/collaboration/execution results add measurements; no new environment variable or dependency is required.
+
+Execution detail adds a collapsed, lazy-loaded **Advanced: Context & Usage**. It groups start/final events by invocation, shows attribution, bounds/provenance/omissions, synthetic or unavailable usage, unknown cost, duration and result, with explicit load error/retry and unconfirmed-final states. Execution revision or manual Refresh reloads open details. Historical/unstarted runs show no-recorded-telemetry, not fabricated zeros. No global dashboard or main UX redesign is added. See `docs/STAGE-12-VERIFICATION.md` for automated and real-browser evidence.
 
 ## Stage 0 decisions (historical)
 
@@ -285,9 +321,9 @@ The approved Hybrid Engine roadmap below remains planning only. Future engine/pr
 12. Stage 6 keeps invocation transient and server-side; it adds neither SQLite migration nor execution history.
 
 
-## Planned Hybrid Agent Engine Boundary (Stage 12 candidate)
+## Planned Hybrid Agent Engine Boundary (historical Stage 12 candidate; deferred)
 
-The 2026-09-18 LibreChat architecture harvest changes the planned implementation strategy for generic agent infrastructure without changing the implemented Stage 0–10 domain boundaries.
+The 2026-09-18 LibreChat architecture harvest proposed the following generic engine strategy. HAN's subsequent Stage 12 Context + Usage Telemetry handoff excludes this experiment from the current stage. The direction is preserved for future authorization, not implemented or evaluated here; Stage 13 is NOT STARTED.
 
 **Current implemented boundary:**
 
@@ -298,7 +334,7 @@ HAN domain/application
   → current Mock / future provider backend
 ```
 
-**Planned Stage 12 validation boundary:**
+**Deferred validation boundary (not implemented):**
 
 ```text
 HAN Experience / Domain
@@ -318,6 +354,6 @@ LibreChat is an engine candidate, not the HAN application shell. The following r
 - Engine integration should use the smallest stable API/adapter surface and remain replaceable.
 - Model-provider, MCP/tool, telemetry, and other outbound data flows are governed by Stage 11 permissions/secrets/audit and an explicit data-egress policy.
 - LibreChat HITL, checkpoint, background, event, skill, MCP, memory, RAG, provider, logging, and deployment primitives may be adopted where they reduce duplicated generic infrastructure, but HAN owns goals, context-loading policy, knowledge governance, evaluation, recovery policy, routing, Agent permissions, projects, Design, Activity interpretation, and product experience.
-- The existing local runtime remains authoritative until the Stage 12 integration proof is implemented, verified, reviewed, and accepted. This section describes planned architecture, not current capability.
+- The existing local runtime remains authoritative until a separately authorized integration proof is implemented, verified, reviewed, and accepted. This section describes planned architecture, not current capability.
 
-The Stage 12 proof must cover one Agent invocation, one controlled MCP/tool call, minimal HAN-controlled RAG retrieval, attributed minimum-sufficient context, local latency/token/cost telemetry, trace mapping, and documented data egress. Stage 13 then exercises recovery across that selected engine boundary.
+The historical proposal covers an Agent invocation, controlled MCP/tool call, minimal HAN-controlled RAG retrieval, attributed context, usage, trace mapping and documented data egress. None of its engine acceptance criteria is claimed by the narrower Stage 12 implementation. Subsequent stage direction requires HAN's handoff.

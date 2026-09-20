@@ -27,13 +27,13 @@ describe('SQLite Artifact and Task Report persistence', () => {
       const execution = await f.completedExecution();
       f.outcomeRepository.close();
       const database = new DatabaseSync(f.path);
-      database.exec('DROP TABLE audit_events; DROP TABLE authority_approvals; DROP TABLE knowledge; DROP TABLE task_report_artifacts; DROP TABLE task_report_executions; DROP TABLE task_reports; DROP TABLE artifacts; DELETE FROM schema_migrations WHERE version IN (5, 6, 7, 8); PRAGMA user_version = 4;');
+      database.exec('DROP TABLE invocation_telemetry; DROP TABLE audit_events; DROP TABLE authority_approvals; DROP TABLE knowledge; DROP TABLE task_report_artifacts; DROP TABLE task_report_executions; DROP TABLE task_reports; DROP TABLE artifacts; DELETE FROM schema_migrations WHERE version IN (5, 6, 7, 8, 9); PRAGMA user_version = 4;');
       const beforeTask = f.tasks.getById('task-a');
       const beforeExecution = f.repository.getById(execution.id);
       const upgraded = new SqliteOutcomeRepository(f.path);
       try {
-        expect(database.prepare('SELECT version FROM schema_migrations ORDER BY version').all().map((row) => row.version)).toEqual([1, 2, 3, 4, 5, 6, 7, 8]);
-        expect(database.prepare('PRAGMA user_version').get()?.user_version).toBe(8);
+        expect(database.prepare('SELECT version FROM schema_migrations ORDER BY version').all().map((row) => row.version)).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9]);
+        expect(database.prepare('PRAGMA user_version').get()?.user_version).toBe(9);
         expect(f.tasks.getById('task-a')).toEqual(beforeTask);
         expect(f.repository.getById(execution.id)).toEqual(beforeExecution);
         expect(database.prepare('PRAGMA foreign_key_check').all()).toEqual([]);
@@ -45,7 +45,7 @@ describe('SQLite Artifact and Task Report persistence', () => {
       } finally { upgraded.close(); database.close(); }
     } finally {
       // The fixture repository was closed above; close only the remaining resources.
-      await f.service.close(); f.repository.close(); f.tasks.close(); f.workspaces.close();
+      await f.service.close(); f.telemetry.close(); f.repository.close(); f.tasks.close(); f.workspaces.close();
       rmSync(f.directory, { recursive: true, force: true });
     }
   });

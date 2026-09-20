@@ -12,6 +12,7 @@ import { SqliteExecutionRepository } from '../src/storage/sqlite/sqliteExecution
 import { SqliteTaskRepository } from '../src/storage/sqlite/sqliteTaskRepository.ts';
 import { SqliteWorkspaceRepository } from '../src/storage/sqlite/sqliteWorkspaceRepository.ts';
 import type { ProviderAdapter, ProviderBinding } from '../src/core/providers/provider.ts';
+import { SqliteTelemetryRepository } from '../src/storage/sqlite/sqliteTelemetryRepository.ts';
 
 export const executionInput = { goal: 'Preserve bounded useful work', participantAgentIds: ['agent-gpt', 'agent-gemini'], collaborationMode: 'sequential', pauseAfterStep: true, taskId: 'task-a' };
 export function executionFixture(adapter: ProviderAdapter<unknown, unknown> = new MockProviderAdapter()) {
@@ -23,12 +24,13 @@ export function executionFixture(adapter: ProviderAdapter<unknown, unknown> = ne
   const tasks = new SqliteTaskRepository(path);
   tasks.create({ id: 'task-a', workspaceId: 'workspace-a', sourceChatId: null, title: 'Persistent Task', goal: 'Independent Task goal', status: 'draft', createdAt: timestamp, updatedAt: timestamp, completedAt: null, schemaVersion: 1 });
   const repository = new SqliteExecutionRepository(path);
+  const telemetry = new SqliteTelemetryRepository(path);
   const binding: ProviderBinding = { providerId: 'mock', adapterId: 'mock', modelId: 'mock-basic', status: 'configured' };
-  const invocation = new AgentInvocationService(initialAgentRegistry, new ProviderAdapterRegistry([{ descriptor: adapter.descriptor, adapter }]), new Map([['agent-gpt', binding], ['agent-gemini', binding]]));
+  const invocation = new AgentInvocationService(initialAgentRegistry, new ProviderAdapterRegistry([{ descriptor: adapter.descriptor, adapter }]), new Map([['agent-gpt', binding], ['agent-gemini', binding]]), telemetry);
   const orchestrator = new OrchestratorService(invocation);
   const runtime = new LocalExecutionRuntime(orchestrator);
   const service = new ExecutionService(repository, workspaces, tasks, runtime);
-  return { directory, path, workspaces, tasks, repository, runtime, service, orchestrator, async close() { await service.close(); repository.close(); tasks.close(); workspaces.close(); rmSync(directory, { recursive: true, force: true }); } };
+  return { directory, path, workspaces, tasks, repository, runtime, service, orchestrator, telemetry, invocation, async close() { await service.close(); telemetry.close(); repository.close(); tasks.close(); workspaces.close(); rmSync(directory, { recursive: true, force: true }); } };
 }
 
 export function deferred<T>() {

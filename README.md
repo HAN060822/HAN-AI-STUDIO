@@ -4,7 +4,7 @@ Local-first personal multi-agent AI workspace. The repository is being built ver
 
 ## Current status
 
-Phase 9 / Stage 11 adds minimum Permissions, Secret references and persistent Audit above sealed Stage 10. Knowledge publication now requires explicit local-owner authority, a reviewed one-attempt approval, and durable pre-action evidence. Stage 11 is builder-complete, awaiting Architect review and HAN acceptance; NOT PUSHED, NOT SEALED. Stage 12 has not started.
+Phase 9 / Stage 12 adds bounded Context packages and local Usage Telemetry above sealed Stages 0–11. Actual Mock-backed Executions now retain inspectable context provenance, usage and timing without storing context text in telemetry. Stage 12 is builder-complete, awaiting Architect review and HAN acceptance; NOT PUSHED, NOT SEALED. Stage 13 has not started. No Builder Harness or engine change is included.
 
 ## Prerequisites
 
@@ -42,6 +42,14 @@ See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for the selected stack and boun
 Workspaces are stored in `var/studio.sqlite` by default. Set `HAN_AI_STUDIO_DATA_DIR` to use a different local data directory. SQLite files and sidecars are ignored by Git. Workspace names do not act as identity; stable UUIDs survive rename, archive, restore, refresh, and runtime restart.
 
 GPT and Gemini have explicit deterministic Mock test bindings; real providers remain disconnected. Open a Workspace to use Prototype Executions and preserve committed contributions as formal text Artifacts. See [Stage 9 verification](docs/STAGE-9-VERIFICATION.md) for the outcome loop and [Stage 8 verification](docs/STAGE-8-VERIFICATION.md) for control/recovery limits. The global intent form remains an interface preview.
+
+## Context & Usage
+
+Open a Workspace → create/start a Mock-backed Execution → open **Advanced: Context & Usage** in its detail. With the default pause-after-step demo, inspect the first contribution, Resume, then inspect the completed run. The collapsed panel loads metadata on demand and survives reload/restart through local SQLite telemetry.
+
+Only the explicit goal/instruction and immediate bounded prior contribution are supplied. Workspace/Task/Execution scope is reference-only; no Chat history, Knowledge, vault, Audit or Secret store is automatically loaded. Character/byte counts are not provider tokens. Mock token counters are conspicuously **synthetic, not billing**; unavailable usage and cost stay unknown. Telemetry and authority Audit remain separate.
+
+Execution telemetry appends start/final evidence. Failure to store start evidence prevents that provider call; finalization failure retains successful output and reports unconfirmed telemetry, never automatic replay. Standalone Home invocation/collaboration measurements remain transient. Historical runs are not backfilled. See [Stage 12 verification](docs/STAGE-12-VERIFICATION.md) for contracts, failure limits and the exact browser smoke.
 
 ## Reviewed Knowledge / Obsidian
 

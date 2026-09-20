@@ -36,10 +36,10 @@ describe('Knowledge persistence and additive migration', () => {
       const artifact = f.outcomeService.createArtifact('workspace-a', { title: 'Keep source', kind: 'result', taskId: 'task-a', sourceExecutionId: execution.id, sourceContributionStepId: 'step-1' });
       const report = f.outcomeService.generateTaskReport('workspace-a', 'task-a');
       const workspace = f.workspaces.getById('workspace-a'); const task = f.tasks.getById('task-a');
-      database.exec('DROP TABLE audit_events; DROP TABLE authority_approvals; DROP TABLE knowledge; DELETE FROM schema_migrations WHERE version IN (7, 8); PRAGMA user_version = 6;');
+      database.exec('DROP TABLE invocation_telemetry; DROP TABLE audit_events; DROP TABLE authority_approvals; DROP TABLE knowledge; DELETE FROM schema_migrations WHERE version IN (7, 8, 9); PRAGMA user_version = 6;');
       const upgraded = new SqliteKnowledgeRepository(f.path);
       try {
-        expect(database.prepare('PRAGMA user_version').get()?.user_version).toBe(8);
+        expect(database.prepare('PRAGMA user_version').get()?.user_version).toBe(9);
         expect(f.workspaces.getById('workspace-a')).toEqual(workspace);
         expect(f.tasks.getById('task-a')).toEqual(task);
         expect(f.repository.getById(execution.id)).toEqual(execution);

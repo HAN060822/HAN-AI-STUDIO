@@ -1,4 +1,5 @@
 import type { AgentId } from '../agents/agent.ts';
+import type { InvocationMeasurement } from '../telemetry/telemetry.ts';
 
 export type CollaborationMode = 'sequential' | 'review';
 export type CollaborationRequest = Readonly<{
@@ -31,6 +32,7 @@ export type AgentContribution = Readonly<{
   mode: 'mock' | 'real';
   status: 'succeeded';
   handoff: AgentHandoff | null;
+  measurement?: InvocationMeasurement;
 }>;
 export type CollaborationFailure = Readonly<{
   code: string;

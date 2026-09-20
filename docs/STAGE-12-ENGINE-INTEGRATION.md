@@ -1,6 +1,6 @@
 # Stage 12 — Context, Telemetry & Engine Integration
 
-**Status:** Planned specification — do not start until Stage 11 is sealed or HAN explicitly changes sequencing.  
+**Status:** Historical, deferred engine proposal — NOT the active Stage 12 specification. HAN's subsequent Stage 12 Builder Handoff authorizes Context + Usage Telemetry on the existing Mock path only and explicitly excludes RAG/provider expansion. The proposal below is preserved for future direction review, not implemented, evaluated or rejected by Stage 12. See `STAGE-12-VERIFICATION.md` for the actual stage.
 **Architecture direction:** Hybrid Agent Engine  
 **Engine candidate:** LibreChat, self-hosted and replaceable  
 **Harvest revision:** `12d78909d3f5247a8d40a47f0ef5c3ac771d9c5a`  

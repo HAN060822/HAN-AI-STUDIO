@@ -190,6 +190,25 @@ const migrations = [
       CREATE TRIGGER approval_no_delete BEFORE DELETE ON authority_approvals BEGIN SELECT RAISE(ABORT, 'Consumed approval is immutable'); END;
     `,
   },
+  {
+    version: 9,
+    name: 'create_invocation_telemetry',
+    sql: `
+      CREATE TABLE invocation_telemetry (
+        sequence INTEGER PRIMARY KEY AUTOINCREMENT,
+        invocation_id TEXT NOT NULL,
+        phase TEXT NOT NULL CHECK (phase IN ('started', 'final')),
+        workspace_id TEXT NOT NULL REFERENCES workspaces(id) ON DELETE RESTRICT,
+        execution_id TEXT NOT NULL REFERENCES executions(id) ON DELETE RESTRICT,
+        step_id TEXT NOT NULL,
+        snapshot_json TEXT NOT NULL CHECK (json_valid(snapshot_json)),
+        UNIQUE (invocation_id, phase)
+      );
+      CREATE INDEX telemetry_execution_idx ON invocation_telemetry(workspace_id, execution_id, sequence);
+      CREATE TRIGGER telemetry_no_update BEFORE UPDATE ON invocation_telemetry BEGIN SELECT RAISE(ABORT, 'Telemetry is append-only'); END;
+      CREATE TRIGGER telemetry_no_delete BEFORE DELETE ON invocation_telemetry BEGIN SELECT RAISE(ABORT, 'Telemetry is append-only'); END;
+    `,
+  },
 ] as const;
 
 export function applyMigrations(database: DatabaseSync): void {

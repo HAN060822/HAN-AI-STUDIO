@@ -50,9 +50,11 @@ Add approved-knowledge records and connector ports; implement preview/approve/ex
 
 Add explicit capabilities, local secret references, approvals, audit events, and redaction. Define the security boundary for later engine integration: HAN-to-engine credentials, model-provider/API secret ownership, MCP/tool permissions, local-first data-egress policy, and Human Director approval mapping. **Exit:** privileged actions are attributable and denied unless granted; future engine/tool connections have an explicit permission, secret, approval, and egress boundary.
 
-## Stage 12 — Context, Telemetry + Engine Integration
+## Stage 12 — Context + Usage Telemetry
 
-Add budgeted, attributed minimum-sufficient context and local latency/token/cost telemetry without leaking content. Introduce a replaceable HAN Engine Adapter and validate an isolated self-hosted LibreChat integration with one Agent invocation, one controlled MCP/tool call, minimal HAN-controlled RAG retrieval, trace mapping, and documented data egress. Preserve Obsidian as the Knowledge Source of Truth and avoid direct HAN coupling to LibreChat internal persistence. **Exit:** execution context inputs and provider usage are inspectable, and the LibreChat engine boundary is proven or explicitly rejected from evidence.
+HAN's current Stage 12 Builder Handoff narrows this gate to the existing Mock-backed Execution → Orchestrator → Agent → Provider path: explicit bounded Context packages, metadata-only provenance, normalized honest usage, monotonic duration and append-oriented local telemetry. Unknown usage/cost remains unknown; no automatic Chat/Knowledge/vault loading. **Exit:** actual execution context and usage are inspectable after reload/restart, failures remain truthful, all Stage 1–11 regressions pass, and Architect/HAN review accepts the stage.
+
+The earlier LibreChat/EngineAdapter/MCP/RAG proof in `docs/STAGE-12-ENGINE-INTEGRATION.md` is retained as deferred planning, not a requirement or completed capability of this authorized stage. No engine adoption/rejection decision, Builder Harness change or later-stage work is implied. Stages 13–14 below remain historical roadmap candidates requiring their own current handoffs; Stage 13 is NOT STARTED.
 
 ## Stage 13 — End-to-End Integration & Recovery
 

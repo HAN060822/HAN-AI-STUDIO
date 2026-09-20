@@ -32,10 +32,10 @@ describe('Additive durable governance evidence', () => {
       const report = f.outcomeService.generateTaskReport('workspace-a', 'task-a');
       const candidate = f.knowledge.create('workspace-a', { sourceType: 'artifact', sourceId: artifact.id });
       const workspace = f.workspaces.getById('workspace-a'); const task = f.tasks.getById('task-a');
-      database.exec('DROP TABLE audit_events; DROP TABLE authority_approvals; DELETE FROM schema_migrations WHERE version = 8; PRAGMA user_version = 7;');
+      database.exec('DROP TABLE invocation_telemetry; DROP TABLE audit_events; DROP TABLE authority_approvals; DELETE FROM schema_migrations WHERE version IN (8, 9); PRAGMA user_version = 7;');
       const upgraded = new SqliteGovernanceRepository(f.path);
       try {
-        expect(database.prepare('PRAGMA user_version').get()?.user_version).toBe(8);
+        expect(database.prepare('PRAGMA user_version').get()?.user_version).toBe(9);
         expect(upgraded.list('workspace-a', 'knowledge', candidate.id)).toEqual([]);
         expect(f.workspaces.getById('workspace-a')).toEqual(workspace); expect(f.tasks.getById('task-a')).toEqual(task);
         expect(f.repository.getById(execution.id)).toEqual(execution); expect(f.outcomeRepository.getArtifactById(artifact.id)).toEqual(artifact);
