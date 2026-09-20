@@ -1,6 +1,7 @@
 import { resolve } from 'node:path';
 import { existsSync } from 'node:fs';
 import { startStudioServer } from './httpServer.ts';
+import { EnvironmentSecretProvider } from '../storage/secrets/environmentSecretProvider.ts';
 
 if (existsSync('.env.local')) process.loadEnvFile('.env.local');
 const dev = process.argv.includes('--dev');
@@ -11,11 +12,13 @@ const databasePath = resolve(dataDirectory, 'studio.sqlite');
 const providerMode = process.env.HAN_AI_STUDIO_PROVIDER_MODE === 'none' ? 'none' : 'mock';
 
 const obsidianVaultRoot = process.env.HAN_AI_STUDIO_OBSIDIAN_VAULT || undefined;
-const studio = await startStudioServer({ dev, host, port, databasePath, providerMode, obsidianVaultRoot });
+const knowledgePublication = (process.env.HAN_AI_STUDIO_KNOWLEDGE_PUBLICATION ?? 'review') === 'review' ? 'review' : 'deny';
+const studio = await startStudioServer({ dev, host, port, databasePath, providerMode, obsidianVaultRoot, knowledgePublication, secretProvider: new EnvironmentSecretProvider() });
 console.log(`HAN's AI STUDIO ${dev ? 'development' : 'production'} server running at http://${host}:${port}`);
 console.log(`Workspace database: ${databasePath}`);
 console.log(`Provider mode: ${providerMode === 'mock' ? 'Mock test backend' : 'No executable provider'}`);
 console.log(`Knowledge connector: ${obsidianVaultRoot ? 'Obsidian configured; review required before save' : 'Not configured; candidates remain local'}`);
+console.log(`Knowledge governance: ${knowledgePublication === 'review' ? 'HAN approval and durable audit required' : 'Publication denied by local policy'}`);
 
 let closing = false;
 async function close(): Promise<void> {

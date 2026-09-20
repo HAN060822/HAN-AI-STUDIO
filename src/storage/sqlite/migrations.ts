@@ -163,6 +163,33 @@ const migrations = [
       CREATE INDEX knowledge_workspace_updated_idx ON knowledge(workspace_id, updated_at DESC, id ASC);
     `,
   },
+  {
+    version: 8,
+    name: 'create_governance_evidence',
+    sql: `
+      CREATE TABLE authority_approvals (
+        id TEXT PRIMARY KEY NOT NULL,
+        workspace_id TEXT REFERENCES workspaces(id) ON DELETE RESTRICT,
+        consumed_at TEXT NOT NULL,
+        snapshot_json TEXT NOT NULL CHECK (json_valid(snapshot_json))
+      );
+      CREATE TABLE audit_events (
+        sequence INTEGER PRIMARY KEY AUTOINCREMENT,
+        id TEXT NOT NULL UNIQUE,
+        attempt_id TEXT NOT NULL,
+        workspace_id TEXT REFERENCES workspaces(id) ON DELETE RESTRICT,
+        resource_type TEXT NOT NULL,
+        resource_id TEXT NOT NULL,
+        approval_id TEXT REFERENCES authority_approvals(id) ON DELETE RESTRICT,
+        snapshot_json TEXT NOT NULL CHECK (json_valid(snapshot_json))
+      );
+      CREATE INDEX audit_resource_idx ON audit_events(workspace_id, resource_type, resource_id, sequence DESC);
+      CREATE TRIGGER audit_no_update BEFORE UPDATE ON audit_events BEGIN SELECT RAISE(ABORT, 'Audit is append-only'); END;
+      CREATE TRIGGER audit_no_delete BEFORE DELETE ON audit_events BEGIN SELECT RAISE(ABORT, 'Audit is append-only'); END;
+      CREATE TRIGGER approval_no_update BEFORE UPDATE ON authority_approvals BEGIN SELECT RAISE(ABORT, 'Consumed approval is immutable'); END;
+      CREATE TRIGGER approval_no_delete BEFORE DELETE ON authority_approvals BEGIN SELECT RAISE(ABORT, 'Consumed approval is immutable'); END;
+    `,
+  },
 ] as const;
 
 export function applyMigrations(database: DatabaseSync): void {

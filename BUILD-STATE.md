@@ -1,13 +1,13 @@
 # HAN's AI STUDIO — Build State
 
 - **Current Version:** 0.0.0
-- **Current Stage:** Stage 10 — Knowledge Interface + Obsidian Connector
-- **Stage Status:** Builder complete — automated and builder browser/real-vault verification passed; awaiting Architect review and HAN acceptance; this builder baseline is being synchronized with the approved architecture-documentation update; NOT SEALED
-- **Latest Completed Stage:** Stage 10 (builder complete); latest independently sealed stage is Stage 9
-- **Latest Git Commit:** `HEAD` — approved LibreChat Hybrid Engine architecture/roadmap alignment on top of the Stage 10 builder baseline; obtain exact hash with `git rev-parse HEAD`
-- **Baseline Commit:** `a0d41c9866f982ca70ed7aa3e8a1734e3d0fce9a` — Stage 9 PASS / HANDS-ON PASS / INDEPENDENT VERIFIED / PUSHED / SEALED; synchronized `main` / `origin/main`, clean before Stage 10
+- **Current Stage:** Stage 11 — Permissions + Secrets + Audit
+- **Stage Status:** Builder complete — automated and controlled real-browser verification passed; awaiting Architect review and HAN acceptance; NOT PUSHED; NOT SEALED
+- **Latest Completed Stage:** Stage 11 (builder complete); Stage 10 is PASS / HAN HANDS-ON PASS / INDEPENDENT VERIFIED / PUSHED / SEALED per HAN's Stage 11 handoff
+- **Latest Git Commit:** `HEAD` — single local `Complete Phase 9 Stage 11 permissions secrets and audit` commit; obtain its exact self-referential hash with `git rev-parse HEAD`
+- **Baseline Commit:** `eeffe4538017053e8503647c384e5a3e0f43d575` — clean synchronized `main` / `origin/main` before Stage 11. The expected `e5e6168e0d5444111d0b95e635e906f2e772593d` Stage 10 code is followed only by approved Hybrid Engine documentation alignment; that documentation is preserved.
 - **Working Branch:** `main`
-- **Planned Engine Direction (not implemented):** 2026-09-18 LibreChat Harvest selected a Hybrid Engine direction for later validation: preserve HAN-owned domain/Harness/Knowledge/Experience boundaries and test LibreChat only through a replaceable adapter/API boundary. This does not change the current Stage 10 gate or claim Stage 11/12 implementation.
+- **Planned Engine Direction (not implemented):** 2026-09-18 LibreChat Harvest selected a Hybrid Engine direction for later validation: preserve HAN-owned domain/Harness/Knowledge/Experience boundaries and test LibreChat only through a replaceable adapter/API boundary. Stage 11 establishes a narrow governance boundary; no Stage 12 engine integration is implemented.
 
 ## What Works
 
@@ -47,10 +47,15 @@
 - Review shows the Markdown, configured vault, and exact path; explicit approval is required for Save. The narrow Obsidian connector creates UTF-8 notes only in `Knowledge/AI-Studio-Generated` with safe UUID-suffixed filenames and no overwrite.
 - Candidate/pending/failed/saved state, bound destination, failure, optimistic revision and timestamps persist in SQLite. Explicit retry handles an identical already-published note without duplication; saved-note Verify is read-only.
 - Browser refresh and full normal development runtime restart preserved saved Knowledge and unsaved candidates. One authorized real-vault smoke note was created; all 91 pre-existing note hashes remained unchanged.
+- Stage 11 adds explicit actor/action/resource/scope permission decisions, default denial, bounded one-use human approvals and persistent safe Audit events around Knowledge publication.
+- Existing content/destination review also authorizes exactly one consequential attempt. Durable consumed approval and start audit are committed before the existing connector can run; success, failure and uncertainty are reported honestly.
+- Loopback/Host/Origin/Fetch-Metadata checks and a fresh process-local Save token establish the documented local-owner surface; client-supplied actor/approval injection is rejected. This is not authentication against local processes.
+- Environment-backed Secret references expose server-only synchronous consumption and safe status. Dummy tests prove governed use/failure; production policy grants no secret use and connects no real provider.
+- Collapsed Advanced Knowledge details show recent scoped audits and safe Secret statuses. Denied and approval-required states remain visible in the normal review flow.
 
 ## Incomplete Work
 
-- Real provider integration, broader permissions/secrets/audit, telemetry, and later-stage Prototype 0 features (Stages 11–14).
+- Real provider/engine integration, broad governance of other capabilities, telemetry, and later-stage Prototype 0 features (Stages 12–14). Stage 11 does not retrofit all internal/Mock actions.
 - Real AI-generated Chat replies, real-provider inference, Task Agent assignment, message deletion, chat archive/delete, and cross-workspace move/copy are intentionally not implemented.
 - Parallel collaboration, intelligent planning/convergence, standalone collaboration history, and final multi-Agent Chat UX are deferred. Mock echo output proves routing/context/provenance, not intelligence or semantic agreement.
 - Collaboration goal limit is 500 characters; previous contribution handoff limit is 800 characters and truncation may omit trailing context. Standalone Stage 7 results remain transient; contributions inside Stage 8 Executions are durable.
@@ -58,16 +63,19 @@
 - Abrupt termination or a failed checkpoint write may lose an uncommitted in-flight output. Recovery preserves the last committed application checkpoint, not provider hidden state; Interrupted is terminal.
 - Artifacts are text-only and immutable in Prototype 0; edit/delete, binary/file storage, automatic preservation, report version history, intelligent synthesis, and automatic report refresh are deferred.
 - Knowledge content is immutable in Prototype 0. No edit/delete, conflict resolution, background retry, bidirectional sync, bulk export, import/search, Memory Engine, RAG/embeddings/vector/graph DB, cloud sync, Obsidian plugin, backup system, or final UI redesign is implemented.
-- SQLite confirmation and external note publication are not one transaction. A failed final database write leaves a retryable pending intent; abrupt crashes can leave an owned temporary file/link pair requiring inspection. Publication requires filesystem hard-link support. Path checks are not protection against hostile concurrent directory replacement; trusted local single-owner runtime only, not Stage 11 security.
+- SQLite confirmation, final audit and external note publication are not one transaction. A failed final database write leaves a retryable pending intent; final audit failure is explicitly unconfirmed. A start event without its final event requires inspection, never automatic replay. Abrupt crashes can leave an owned temporary file/link pair requiring inspection. Publication requires hard-link support; path checks do not protect against hostile concurrent directory replacement.
+- Prototype policy is code/config-backed; revocation requires restart. No IAM, login, policy dashboard, OS secret vault, cryptographic audit ledger, retention/rotation or multi-process ownership exists. Audit guards application history, not against a database owner removing triggers. Secret consumers are trusted synchronous server code; an asynchronous real adapter needs a separately reviewed contract.
 
 ## Known Errors
 
-- None.
+- No known Stage 11 test/build errors. Read-only real-vault inspection found the historical Stage 10 smoke note absent while its local Knowledge record remains saved. It was not recreated or deleted by Stage 11. See Stage 11 verification evidence; no inference about who removed it is made.
 
 ## Tests Status
 
-- `npm.cmd test`: passed (28 test files, 164 tests) with no React `act(...)` warnings. Includes 42 new Stage 10 domain/promotion/connector/persistence/migration/API/UI tests plus all 122 Stage 1–9 tests. Automated writes use temporary vaults only.
-- `npm.cmd run build`: passed (strict browser/server TypeScript checks and Vite production bundle, 46 modules).
+- `npm.cmd test`: passed (32 test files, 194 tests) with no React `act(...)` warnings. All 164 Stage 1–10 tests remain green plus 30 Stage 11 security/persistence/API/UI cases. Automated writes use temporary vaults only.
+- `npm.cmd run build`: passed (strict browser/server TypeScript checks and Vite production bundle, 47 modules).
+- Stage 11 real-browser smoke: normal `npm.cmd run dev` with isolated data/vault process overrides; denied policy visible, denied request 403 and no-approval request 409 created zero notes; explicit browser approval created exactly one temporary note; byte Verify, four audit events and one consumed approval survived full restart. Browser warning/error log empty; Mock invocation regression passed.
+- Stage 11 real vault: read-only check of 105 Markdown files was hash-stable; historical Stage 10 disposable note is absent. No Stage 11 real-vault note created and no existing real-vault note changed. Temporary smoke data remains ignored in `var/stage11-browser/` for review.
 - Exact `npm.cmd run dev`: combined local runtime and Vite server started on `127.0.0.1:5173` with Mock test backend; full stop/start and browser reload passed for durable Execution state.
 - Real-browser Stage 7 smoke passed: production Agent identities/status, single-Agent invocation, Sequential GPT → Gemini, Review / Challenge with visible handoff, attributed final `MOCK · TEST OUTPUT`, usable form and result layout.
 - Workspace/Chat/human message/Task creation and Active/Closed separation passed in `Stage 7 smoke verification`. Browser refresh and full dev-server restart retained the human data; collaboration ran again after restart. Browser error/warning log was empty. Smoke data is only in ignored `var/studio.sqlite`; existing Workspaces were not modified.
@@ -75,7 +83,7 @@
 - Stage 9 real-browser smoke passed in separate `Stage 9 outcome verification`: Task → completed two-Agent Execution → final contribution → formal Artifact → deterministic Task Report. Artifact/report identity, content, provenance and references survived browser reload and full dev-server restart. Browser error/warning log was empty.
 - Stage 10 real-browser smoke passed in isolated `Stage 10 knowledge verification`: Task → two-Agent Mock Execution → Artifact → reviewed Knowledge → explicit Save → real UTF-8 Markdown → Verify. Task Report/manual candidates remained unsaved. Reload and full server restart retained identities, content, provenance and path; browser warning/error log was empty. Exact note path and evidence are in `docs/STAGE-10-VERIFICATION.md`.
 - Real-vault before/after SHA-256 comparison: 91 existing notes unchanged, one clearly identifiable disposable Stage 10 note added in the dedicated generated destination; no canonical architecture notes modified.
-- `git diff --check`: passed; no runtime database, secret, local env, generated build output, or dependency change is included in the Stage 10 commit.
+- `git diff --check`: passed; no runtime database, secret, local env, generated build output, or dependency change is included in the Stage 11 commit.
 - Real API and 12-Task UI smoke verification passed for Workspace, Chat, Message, and Task data, including stable Task identity, active/closed classification, goal/state, and optional source Chat relation across refresh and runtime restart.
 - `npm ci`: clean lockfile install completed during Stage 0; npm audit reported 0 vulnerabilities.
 
@@ -125,6 +133,9 @@
 - `ObsidianConnector` validates an explicitly configured existing vault and bounded generated area. It rejects traversal, links/junctions, unsafe files and overwrite, publishes via exclusive temp + fsync + atomic no-replace hard link, and returns explicit outcome/path.
 - Approval binds a fresh preview to the current snapshot and destination; durable pending intent precedes publish. Failed writes retain candidates and sources. Repeated saves of one identity require matching bytes; new candidates receive new UUID-based names. Saved missing/edited notes are reported, never replaced.
 - Markdown keeps an immutable first save-approval timestamp for retry identity; SQLite/UI separately expose confirmed `savedAt`. No automatic export or restart retry and no final permission-engine claim.
+- Stage 11 `GovernanceService` owns normalized decisions and scoped one-use approvals. Only explicit policy grants can authorize; PHYSICAL is reserved and always denied. The configured HAN publication grant is global across Workspaces, but each approval binds one Workspace, Knowledge ID, action, connector, destination fingerprint and reviewed snapshot fingerprint.
+- Migration 8 only adds immutable consumed approvals and append-only audit tables/index/triggers with restrictive Workspace/approval references. No historical audit backfill or Stage 1–10 schema rewrite.
+- Required evidence fails closed before a consequential action. Post-action audit failure reports uncertainty without erasing retained Knowledge or falsely claiming no file exists. Secret values/content/raw errors never belong in audit; references and safe codes do.
 
 ## Changed Interfaces
 
@@ -148,10 +159,12 @@
 - Stage 10 adds `GET/POST /api/workspaces/:workspaceId/knowledge`, item GET, preview GET, explicitly approved save POST, and verify GET. Invalid input/approval 400, scope 404, stale/conflict/state 409, unsupported method 405, connector/storage failure 503.
 - Server-only `HAN_AI_STUDIO_OBSIDIAN_VAULT` configures the existing vault. The executable loads ignored `.env.local`; existing process environment wins. Automated server fixtures receive explicit temporary roots and do not load local configuration.
 - `Reviewed Knowledge` UI supplies Artifact/Task Report/manual selection, candidate history, content/provenance/Markdown/path review, explicit approval/save/retry, visible errors and read-only verification. Overall UI architecture is unchanged.
+- Stage 11 adds GET `/api/governance/session` (local CSRF context, not a provider secret), GET `/api/governance/secrets` (reference/status only), and scoped Knowledge `/:id/governance` and `/:id/audit` GET routes. Preview includes `PermissionDecision`. Save requires current session header and explicit review; valid requests lacking authority return 403, lacking approval 409, audit failure 503. Malformed requests remain 400.
+- New configuration: `HAN_AI_STUDIO_KNOWLEDGE_PUBLICATION=review|deny` (unknown values deny), and optional server-only `HAN_AI_STUDIO_SECRET_OPENAI/GEMINI/GITHUB/ENGINE`. No credentials were added; vault path remains configuration, not a SecretRef. Non-loopback deployment is rejected.
 
 ## Uncommitted Work
 
-- None after the single local Stage 10 completion commit. Ignored `.env.local`, `var/studio.sqlite`/sidecars, and `dist/` are local-only and intentionally excluded.
+- None after the single local Stage 11 completion commit. Ignored `.env.local`, runtime databases/sidecars, temporary smoke vault and `dist/` remain local-only and excluded. Main is one local commit ahead of the unchanged origin/main baseline.
 
 ## Blockers
 
@@ -159,7 +172,7 @@
 
 ## Next Exact Action
 
-STOP for HAN + ChatGPT Stage 10 architecture/functional review and HAN acceptance using `docs/STAGE-10-VERIFICATION.md`. Do not push. Do not begin Stage 11 without explicit authorization.
+STOP for HAN + ChatGPT Stage 11 architecture/functional review and HAN acceptance using `docs/STAGE-11-VERIFICATION.md`. Do not push. Do not begin Stage 12 without explicit authorization.
 
 ## Relevant Architecture Documents
 
@@ -169,9 +182,10 @@ STOP for HAN + ChatGPT Stage 10 architecture/functional review and HAN acceptanc
 - `docs/STAGE-8-VERIFICATION.md` — exact human test procedure, builder evidence, safe-boundary/recovery limits and review points.
 - `docs/STAGE-9-VERIFICATION.md` — exact Artifact/Task Report closed-loop procedure, builder evidence, limits and review points.
 - `docs/STAGE-10-VERIFICATION.md` — Knowledge/Obsidian approval loop, exact real-vault disposable note path, persistence/retry evidence, limitations and Architect review points.
+- `docs/STAGE-11-VERIFICATION.md` — exact governance contracts/enforcement, failure policy, isolated browser evidence, real-vault observation and Architect review points.
 
 ## Stage Gate
 
-- **Current Stage:** Stage 10 — Knowledge Interface + Obsidian Connector
-- **Stage Status:** Builder complete — awaiting Architect review and HAN acceptance; builder baseline synchronized with approved architecture documentation; NOT SEALED
-- **Stage 11:** NOT STARTED
+- **Current Stage:** Stage 11 — Permissions + Secrets + Audit
+- **Stage Status:** Builder complete — awaiting Architect review and HAN acceptance; NOT PUSHED; NOT SEALED
+- **Stage 12:** NOT STARTED

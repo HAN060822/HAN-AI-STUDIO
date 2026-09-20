@@ -51,14 +51,14 @@ describe('Execution checkpoints and migration', () => {
     try {
       const database = new DatabaseSync(f.path);
       // Temporary fixture only: recreate the exact pre-Stage-8 schema version.
-      database.exec("DROP TABLE knowledge; DROP TABLE task_report_artifacts; DROP TABLE task_report_executions; DROP TABLE task_reports; DROP TABLE artifacts; DROP TABLE executions; DELETE FROM schema_migrations WHERE version IN (4, 5, 6, 7); PRAGMA user_version = 3;");
+      database.exec("DROP TABLE audit_events; DROP TABLE authority_approvals; DROP TABLE knowledge; DROP TABLE task_report_artifacts; DROP TABLE task_report_executions; DROP TABLE task_reports; DROP TABLE artifacts; DROP TABLE executions; DELETE FROM schema_migrations WHERE version IN (4, 5, 6, 7, 8); PRAGMA user_version = 3;");
       const beforeTask = f.tasks.getById('task-a');
       const beforeWorkspace = f.workspaces.getById('workspace-a');
       database.exec("INSERT INTO chats VALUES ('chat-old','workspace-a','Old Chat','active','2026-09-16','2026-09-16',1); INSERT INTO messages VALUES ('message-old','chat-old','user','Retain this','2026-09-16',1);");
       const upgraded = new SqliteExecutionRepository(f.path);
       try {
-        expect(database.prepare('SELECT version FROM schema_migrations ORDER BY version').all().map((row) => row.version)).toEqual([1, 2, 3, 4, 5, 6, 7]);
-        expect(database.prepare('PRAGMA user_version').get()?.user_version).toBe(7);
+        expect(database.prepare('SELECT version FROM schema_migrations ORDER BY version').all().map((row) => row.version)).toEqual([1, 2, 3, 4, 5, 6, 7, 8]);
+        expect(database.prepare('PRAGMA user_version').get()?.user_version).toBe(8);
         expect(f.tasks.getById('task-a')).toEqual(beforeTask);
         expect(f.workspaces.getById('workspace-a')).toEqual(beforeWorkspace);
         expect(database.prepare("SELECT content FROM messages WHERE id = 'message-old'").get()?.content).toBe('Retain this');

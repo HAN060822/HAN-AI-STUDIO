@@ -205,6 +205,70 @@ Limits: SQLite and external filesystem are not one transaction; recovery is expl
 
 See `docs/STAGE-10-VERIFICATION.md` for reproducible tests, the single-note real-vault smoke and Architect review points.
 
+## Stage 11 minimum governance
+
+The Stage 5–10 sections above describe their historical scope. Stage 11 now adds a narrow, real enforcement path without expanding provider/runtime capability:
+
+```text
+Reviewed Knowledge Save
+  -> server-owned local actor + fresh preview
+  -> GovernanceService: explicit grant + one-use approval
+  -> atomic consumed approval / started audit
+  -> existing Knowledge pending intent -> unchanged ObsidianConnector
+  -> retained Knowledge outcome -> final audit
+```
+
+**CONNECTION ≠ CAPABILITY ≠ PERMISSION ≠ APPROVAL ≠ AUTONOMY.** The UI displays decisions, never manufactures authority. The connector is a trusted server capability behind the service, not an independently exposed write API. Configuration selects a destination; only permission plus explicit approval can authorize publication. Agents, Orchestrator and Execution runtime receive no publication or secret-use grant.
+
+### Permission contract and actor boundary
+
+`Actor` distinguishes `human`, `agent`, and `system` with stable IDs. `ActionIntent` names an action, typed resource/ID, scope, capability, destination fingerprint and reviewed-payload fingerprint. Actions are READ, WRITE, CREATE, MODIFY, EXECUTE, DELETE and EXTERNAL; PHYSICAL is reserved and always denied. Resources include Workspace, Task, Execution, Artifact, Knowledge, Connector, Provider, Filesystem, Secret and Audit.
+
+`Scope` is explicit global, Workspace, Task-in-Workspace or Execution-in-Workspace. Only an explicitly configured global grant spans Workspaces. Workspace grants cover that Workspace's child scopes; Task and Execution grants require the same scope kind and identity. There is no role hierarchy, inherited policy language or implicit Agent trust. The default `GovernanceService` has no grants. `PermissionDecision` is normalized `allowed | denied | approval_required` with fixed safe reason/code and grant reference.
+
+The small runtime policy supplies HAN (`human/han-local`) an explicit global metadata-audit READ grant and, only in `review` mode, an EXTERNAL Knowledge grant for `obsidian-markdown.publish`. The latter still requires exact review/approval on every attempt. `HAN_AI_STUDIO_KNOWLEDGE_PUBLICATION=deny` or an unknown value removes that grant after restart. Existing consumed approvals cannot restore revoked authority. This is code/config policy, not persistent policy administration.
+
+HTTP composition supplies the actor, never the JSON body. `LocalAuthority` requires loopback peer, exact local Host, same-origin Origin when present and same-origin/none Fetch-Metadata when present. Save additionally requires JSON and a random process-local `x-han-session` value obtained from a protected, no-store session endpoint. The UI fetches fresh context for each Save. Server startup rejects non-loopback binding. Client actor/approval fields are invalid input.
+
+This is a local-owner transport/CSRF boundary, **not authentication**: a trusted local process can obtain the same session; same-user malicious code, XSS, compromised adapters, direct filesystem/database access and hostile directory races are not isolated. The server derives authority from the documented single-owner deployment, not from a claim in an Agent response. Other Stage 1–10 internal/Mock routes are not all retrofitted with this guard or audit.
+
+### Approval contract and review composition
+
+`Approval` has UUID, actor, exact canonical intent, grant ID, creation/expiry timestamps and schema version. The service issues it only for a permitted human with an approval-required decision. It is private to that service instance, expires in five minutes, and is consumed on one attempted use, including rejection or audit outage. JSON snapshot matching rejects tampering, wrong actor/action/resource/scope/destination/content, replay and restart reuse. No endpoint accepts caller-created approvals or grants.
+
+One Prototype interaction safely covers two meanings: the checkbox confirms content review **and** authority for the exact visible destination. Save sends that explicit choice with the Stage 10 freshness token. `KnowledgeService` recomputes the current preview, checks the token and builds a consequence fingerprint from the entire current record/preview. `GovernanceService` then creates and immediately consumes a new one-attempt approval after checking current policy. Merely fetching preview or holding the CSRF token never approves a write. No inbox or second redundant approval click is introduced.
+
+The approval record captures the pre-save reviewed snapshot; Stage 10 still sets its first `approvedAt` timestamp when persisting pending state. That documented metadata addition preserves retry byte identity. Failed retry requires fresh human approval and the same bound destination; the connector's create-once/no-overwrite safeguards remain unchanged.
+
+### Audit contract and failure policy
+
+`AuditEvent` records UUID, attempt ID, UTC timestamp, actor or unattributed/null authority, canonical intent references, decision, approval reference, outcome, safe code and schema version. Outcomes are `not_executed`, `started`, `succeeded`, `failed`, or `unconfirmed`. Start/final records share attempt/approval IDs. Known connector failures are `failed`; unexpected exceptions after entering the action are conservatively `unconfirmed`. Raw exceptions, content, titles, prompts, absolute vault paths, session tokens and secret values are not copied into audit. Actor/intent projection strips extra fields and bounds identifiers; service-generated decisions and codes use fixed safe vocabulary.
+
+Additive Migration 8 adds `authority_approvals` and `audit_events`, a Workspace/resource/sequence index, restrictive Workspace/approval references, and triggers preventing updates/deletes. Consumed approval plus start event are one SQLite transaction. Existing migrations and domain records are untouched; there is no invented historical audit. The append-only application/SQL contract is not a cryptographically tamper-proof ledger: a database owner can alter schema/triggers. There is no rotation/retention/export system.
+
+Before external effect, required approval/audit persistence must succeed or the action stops with 503 and source/candidate unchanged. Denied or insufficient approval attempts append `not_executed` and return 403/409; if even that audit fails, return 503 without invoking the action. Structural/scope/stale-preview failures rejected before a valid intent are ordinary validation failures, not audited action attempts. Preview decisions and history reads do not recursively write audit events.
+
+After an action, failure to append final audit returns explicit `audit_unconfirmed` (503): the file may exist and Knowledge may already be saved. Retain those facts, require inspection/Verify and never silently retry or claim rollback. Crash-left start events remain historical uncertainty, not fabricated success/failure. SQLite, filesystem publication and final audit are not one transaction; this conservative gap is intentional and tested.
+
+### Secret contract
+
+`SecretRef` is an allowlist: `provider.openai`, `provider.gemini`, `connector.github`, `engine.local`. `EnvironmentSecretProvider` maps those server-only references to `HAN_AI_STUDIO_SECRET_OPENAI`, `_GEMINI`, `_GITHUB`, `_ENGINE` respectively. Arbitrary environment names cannot be requested. Private environment state is not serialized. `status()` returns configured/unavailable only; `use()` gives a value only to trusted synchronous server code and discards its return value. Missing/blank references prevent consumer execution. Consumer errors become fixed safe `SecretError` messages.
+
+`SecretService` first enforces EXECUTE/secret.use permission and required human approval, then durable start evidence, resolution/consumption and safe success/failure audit. It is tested with dummy values and test-only scoped grants; **no production secret-use grant, resolution HTTP endpoint, real provider or engine is enabled**. The server factory defaults to an empty environment provider, while the executable explicitly injects the process-environment provider after loading ignored `.env.local`.
+
+This is not a custom encrypted vault, callback sandbox, memory-zeroization scheme or content-DLP filter. Trusted consumers must not log/copy credentials; there is no asynchronous adapter contract yet. No secret is automatically copied into ordinary SQLite domain tables, Knowledge, Task Reports, Audit or browser assets. The Obsidian vault path is separate configuration, not a credential.
+
+### API/UI scope and future engine constraints
+
+- GET `/api/governance/session`: local owner/session context; no-store, process-local CSRF value, not a provider credential.
+- GET `/api/governance/secrets`: allowlisted reference/status only; no value endpoint.
+- Knowledge GET `/:id/preview` adds `decision`; GET `/:id/governance` returns current decision/history; GET `/:id/audit` retrieves recent 20 scoped events even if vault configuration is unavailable.
+- POST `/:id/save` requires local session context, exact fresh preview and explicit approval; 403 denied, 409 approval required, 503 evidence failure. Existing validation/conflict/connector semantics otherwise remain.
+
+Knowledge's existing review surface displays the decision/reason and disables denied Save/approval controls. Advanced details are collapsed by default and show safe Secret statuses and bounded recent audit, with explicit load failures. Saved Verify remains read-only. No overall UI redesign or permissions dashboard is added.
+
+The approved Hybrid Engine roadmap below remains planning only. Future engine/provider credentials must remain separate server-side references; engines and MCP tools are not HAN actors by default and inherit no grants. Any future data egress/tool consequence must have a HAN-owned explicit scoped intent, destination/payload binding, permission/approval policy and truthful audit before it is connected. Stage 11 does not yet enforce an engine-wide egress policy because no real engine or such egress exists. Stage 12 is NOT STARTED. See `docs/STAGE-11-VERIFICATION.md` for evidence and review points.
+
 ## Stage 0 decisions (historical)
 
 1. Use one TypeScript package while Prototype 0 remains a modular monolith.

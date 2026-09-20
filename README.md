@@ -4,7 +4,7 @@ Local-first personal multi-agent AI workspace. The repository is being built ver
 
 ## Current status
 
-Phase 9 / Stage 10 adds reviewed Knowledge and a narrow Obsidian Markdown connector above sealed Stage 9. Artifact, Task Report, and manual candidates remain local until HAN reviews the content/destination and explicitly approves Save. Stage 10 is builder-complete and awaiting independent review; Stage 11 has not started.
+Phase 9 / Stage 11 adds minimum Permissions, Secret references and persistent Audit above sealed Stage 10. Knowledge publication now requires explicit local-owner authority, a reviewed one-attempt approval, and durable pre-action evidence. Stage 11 is builder-complete, awaiting Architect review and HAN acceptance; NOT PUSHED, NOT SEALED. Stage 12 has not started.
 
 ## Prerequisites
 
@@ -49,9 +49,21 @@ Set `HAN_AI_STUDIO_OBSIDIAN_VAULT` to an **existing absolute vault path** contai
 
 Open a Workspace → **Reviewed Knowledge** → select Artifact / Task Report / Manual Knowledge → **Prepare for Review**. Preparing persists only a candidate in SQLite. Review the Markdown, vault, and relative path; check approval and select **Save Reviewed Knowledge**. **Verify Saved Note** reads and compares the existing Markdown. With no configured vault, candidates remain available and the UI explains why Save is unavailable.
 
-The only generated-note destination is `Knowledge/AI-Studio-Generated/` inside the configured vault. Names combine a sanitized title and stable Knowledge UUID. Repeat saves verify the same note; differing existing notes are never replaced. Explicitly preparing another candidate creates another identity. There is no automatic export, edit/delete, background retry or bidirectional sync. Use one local server per database and keep the runtime bound to loopback; Stage 10 is not a permission engine.
+The only generated-note destination is `Knowledge/AI-Studio-Generated/` inside the configured vault. Names combine a sanitized title and stable Knowledge UUID. Repeat saves verify the same note; differing existing notes are never replaced. Explicitly preparing another candidate creates another identity. There is no automatic export, edit/delete, background retry or bidirectional sync. Use one local server per database; Stage 11 enforces loopback-only binding, not multi-user authentication.
 
 See [Stage 10 verification](docs/STAGE-10-VERIFICATION.md) for configuration, failure/retry behavior, browser evidence, and the exact disposable real-vault smoke note.
+
+## Prototype governance
+
+`HAN_AI_STUDIO_KNOWLEDGE_PUBLICATION=review` (default) grants only the trusted local owner reviewed Knowledge publication. `deny`, or any unrecognized value, blocks publication. Restart after changing policy. Agents and runtime have no external-publication or secret-use grants. A configured connector or Secret reference grants no authority.
+
+The existing review checkbox covers both reviewed content and authority for this exact destination and one attempt. The server checks the current preview, local request context, explicit permission and approval; React is not the authority. A fresh process-local CSRF token accompanies Save. This assumes trusted local code and one owner, not an identity/login platform.
+
+Open **Advanced: authority, audit & Secret references** in Knowledge review for recent metadata-only attempt history and configured/unavailable Secret references. Pre-action audit failure prevents publication. If final audit cannot be confirmed, the UI reports uncertainty: inspect the retained record and use read-only Verify before any fresh reviewed retry. Nothing is replayed automatically.
+
+Optional server-only mappings are `HAN_AI_STUDIO_SECRET_OPENAI`, `HAN_AI_STUDIO_SECRET_GEMINI`, `HAN_AI_STUDIO_SECRET_GITHUB` and `HAN_AI_STUDIO_SECRET_ENGINE`. Do not add real keys for Stage 11. No real provider, engine, MCP tool or network egress is connected or authorized. The environment-backed Secret provider exposes status and a trusted synchronous server-consumer seam, never a value API.
+
+See [Stage 11 verification](docs/STAGE-11-VERIFICATION.md) for contracts, exact enforcement scope, tests, isolated-vault browser smoke, failure policy and review points. Stage 1–10 internal/Mock actions are not all retrofitted with governance; this is not a universal application sandbox.
 
 ## Environment
 

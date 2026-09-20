@@ -99,3 +99,5 @@ button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visib
 .knowledge-panel article { margin-top: 1rem; padding: 1rem; border-left: 3px solid #8a6fd1; background: #f0ebfc; }
 .knowledge-content { white-space: pre-wrap; overflow-wrap: anywhere; max-height: 24rem; overflow-y: auto; font-family: inherit; }
 .knowledge-panel [role="alert"] { color: #9a3544; }
+.governance-details { margin-top: 1rem; }
+.governance-details ol { max-height: 18rem; overflow-y: auto; padding-left: 1.5rem; }

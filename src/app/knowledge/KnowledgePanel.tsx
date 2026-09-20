@@ -4,6 +4,7 @@ import type { Artifact } from '../../core/outcomes/artifact';
 import type { TaskReport } from '../../core/outcomes/taskReport';
 import { outcomeApi } from '../outcomes/outcomeApi';
 import { knowledgeApi, type ReviewPreview } from './knowledgeApi';
+import { GovernanceDetails } from './GovernanceDetails';
 
 export function KnowledgePanel({ workspaceId }: { workspaceId: string }) {
   const [records, setRecords] = useState<Knowledge[]>([]);
@@ -22,6 +23,7 @@ export function KnowledgePanel({ workspaceId }: { workspaceId: string }) {
   const [approved, setApproved] = useState(false);
   const [verification, setVerification] = useState('');
   const [refresh, setRefresh] = useState(0);
+  const [auditRefresh, setAuditRefresh] = useState(0);
   const record = records.find((item) => item.id === selected);
   const sources = sourceType === 'artifact' ? artifacts.map((item) => ({ id: item.id, title: item.title })) : reports.map((item) => ({ id: item.id, title: item.task.title }));
   const chosenSource = sources.some((item) => item.id === sourceId) ? sourceId : sources[0]?.id ?? '';
@@ -63,7 +65,7 @@ export function KnowledgePanel({ workspaceId }: { workspaceId: string }) {
     catch (reason) {
       setError(reason instanceof Error ? reason.message : 'Save is not confirmed.');
       try { merge(await knowledgeApi.get(workspaceId, record.id)); } catch { setPreview(null); }
-    } finally { setBusy(false); }
+    } finally { setBusy(false); setAuditRefresh((value) => value + 1); }
   }
   async function verify() {
     if (!record) return;
@@ -95,9 +97,10 @@ export function KnowledgePanel({ workspaceId }: { workspaceId: string }) {
         {record.failure && <p role="alert">Last save failed: {record.failure.message}</p>}
         {previewError && <p role="alert">{previewError} Candidate retained in AI Studio.</p>}
         {preview && <><p>Obsidian vault: {preview.destinationLabel}</p><p>Note path: {preview.relativePath}</p><details><summary>Markdown preview</summary><pre className="knowledge-content">{preview.markdown}</pre></details>
-          {record.status === 'saved' ? <><p>Saved to Obsidian. Verification reads the existing note.</p><button type="button" disabled={busy} onClick={() => void verify()}>Verify Saved Note</button></> : <><p>Saving creates this note once. Its approval timestamp is set on the first save attempt. Retry never overwrites a different note.</p><label><input type="checkbox" checked={approved} disabled={busy} onChange={(event) => setApproved(event.target.checked)} /> I reviewed this content and destination and approve saving to Obsidian.</label><button type="button" disabled={!approved || busy} onClick={() => void save()}>{record.status === 'candidate' ? 'Save Reviewed Knowledge' : 'Retry Reviewed Save'}</button></>}
+          {record.status === 'saved' ? <><p>Saved to Obsidian. Verification reads the existing note.</p><button type="button" disabled={busy} onClick={() => void verify()}>Verify Saved Note</button></> : <><p role={preview.decision.status === 'denied' ? 'alert' : undefined}>Authority: {preview.decision.status} · {preview.decision.reason}</p><p>Saving creates this note once. Approval covers this exact content, destination and one publication attempt. Required audit evidence is recorded before the connector runs. Retry needs fresh approval and never overwrites a different note.</p><label><input type="checkbox" checked={approved} disabled={busy || preview.decision.status === 'denied'} onChange={(event) => setApproved(event.target.checked)} /> I reviewed this content and destination and approve saving to Obsidian.</label><button type="button" disabled={!approved || busy || preview.decision.status === 'denied'} onClick={() => void save()}>{record.status === 'candidate' ? 'Save Reviewed Knowledge' : 'Retry Reviewed Save'}</button></>}
         </>}
         {verification && <p role="status">{verification}</p>}
+        <GovernanceDetails workspaceId={workspaceId} knowledgeId={record.id} refresh={`${record.revision}:${refresh}:${auditRefresh}`} />
       </article>}
     </>}
   </section>;

@@ -14,6 +14,13 @@ import { KnowledgeService } from '../application/knowledge/knowledgeService.ts';
 import { KnowledgeError } from '../core/knowledge/knowledge.ts';
 import { ObsidianConnector } from '../connectors/obsidian/obsidianConnector.ts';
 import { SqliteKnowledgeRepository } from '../storage/sqlite/sqliteKnowledgeRepository.ts';
+import { SqliteGovernanceRepository } from '../storage/sqlite/sqliteGovernanceRepository.ts';
+import { GovernanceService } from '../application/governance/governanceService.ts';
+import { prototypeGrants } from '../application/governance/prototypePolicy.ts';
+import { GovernanceError } from '../core/governance/governance.ts';
+import type { SecretProvider } from '../application/secrets/secretProvider.ts';
+import { EnvironmentSecretProvider } from '../storage/secrets/environmentSecretProvider.ts';
+import { LocalAuthority } from './localAuthority.ts';
 import { ExecutionError, isExecutionAction } from '../core/executions/execution.ts';
 import { SqliteExecutionRepository } from '../storage/sqlite/sqliteExecutionRepository.ts';
 import { SqliteOutcomeRepository } from '../storage/sqlite/sqliteOutcomeRepository.ts';
@@ -40,6 +47,8 @@ type StudioServerOptions = {
   dev?: boolean;
   providerMode?: 'mock' | 'none';
   obsidianVaultRoot?: string;
+  knowledgePublication?: 'review' | 'deny';
+  secretProvider?: SecretProvider;
 };
 
 type JsonRecord = Record<string, unknown>;
@@ -53,7 +62,7 @@ const contentTypes: Record<string, string> = {
 };
 
 function sendJson(response: ServerResponse, status: number, body: unknown): void {
-  response.writeHead(status, { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' });
+  response.writeHead(status, { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store', 'x-content-type-options': 'nosniff' });
   response.end(JSON.stringify(body));
 }
 
@@ -188,24 +197,30 @@ async function handleExecutionApi(request: IncomingMessage, response: ServerResp
   return true;
 }
 
-async function handleKnowledgeApi(request: IncomingMessage, response: ServerResponse, service: KnowledgeService, url: URL): Promise<boolean> {
-  const match = url.pathname.match(/^\/api\/workspaces\/([^/]+)\/knowledge(?:\/([^/]+)(?:\/(preview|save|verify))?)?$/);
+async function handleKnowledgeApi(request: IncomingMessage, response: ServerResponse, service: KnowledgeService, authority: LocalAuthority, url: URL): Promise<boolean> {
+  const match = url.pathname.match(/^\/api\/workspaces\/([^/]+)\/knowledge(?:\/([^/]+)(?:\/(preview|save|verify|governance|audit))?)?$/);
   if (!match) return false;
   try {
     const workspaceId = decodeURIComponent(match[1]);
     const id = match[2] ? decodeURIComponent(match[2]) : undefined;
     const action = match[3];
+    const actor = authority.actor(request, action === 'save');
+    if (!actor && action !== 'save') throw new GovernanceError('permission_denied', 'Knowledge access requires the trusted local owner surface.');
     if (!id && request.method === 'GET') sendJson(response, 200, { records: service.list(workspaceId) });
     else if (!id && request.method === 'POST') sendJson(response, 201, { record: service.create(workspaceId, await readJson(request)) });
     else if (id && !action && request.method === 'GET') sendJson(response, 200, { record: service.get(workspaceId, id) });
-    else if (id && action === 'preview' && request.method === 'GET') sendJson(response, 200, { preview: service.preview(workspaceId, id) });
+    else if (id && action === 'preview' && request.method === 'GET') sendJson(response, 200, { preview: service.review(actor, workspaceId, id) });
     else if (id && action === 'verify' && request.method === 'GET') sendJson(response, 200, { verification: service.verify(workspaceId, id) });
+    else if (id && action === 'governance' && request.method === 'GET') sendJson(response, 200, service.governanceState(actor, workspaceId, id));
+    else if (id && action === 'audit' && request.method === 'GET') sendJson(response, 200, { events: service.audit(actor, workspaceId, id) });
     else if (id && action === 'save' && request.method === 'POST') {
-      const record = service.save(workspaceId, id, await readJson(request));
+      const record = service.save(actor, workspaceId, id, await readJson(request));
       sendJson(response, record.status === 'saved' ? 200 : 503, { record, ...(record.failure ? { error: record.failure.message, code: record.failure.code } : {}) });
     } else sendJson(response, 405, { error: 'Knowledge method is not supported.', code: 'method_not_allowed' });
   } catch (error) {
-    if (error instanceof KnowledgeError) {
+    if (error instanceof GovernanceError) {
+      sendJson(response, error.code === 'permission_denied' ? 403 : error.code === 'approval_required' ? 409 : 503, { error: error.message, code: error.code, decision: error.decision });
+    } else if (error instanceof KnowledgeError) {
       const status = error.code === 'not_found' ? 404 : error.code === 'invalid_input' || error.code === 'approval_required' ? 400 : ['conflict', 'stale_preview', 'destination_changed', 'note_changed', 'not_saved'].includes(error.code) ? 409 : 503;
       sendJson(response, status, { error: error.message, code: error.code });
     } else if (error instanceof WorkspaceValidationError || error instanceof URIError) sendJson(response, 400, { error: 'Knowledge request must be valid JSON with valid identifiers.', code: 'invalid_input' });
@@ -378,6 +393,7 @@ async function serveProductionFile(request: IncomingMessage, response: ServerRes
 }
 
 export async function startStudioServer(options: StudioServerOptions) {
+  if (options.host && !['127.0.0.1', 'localhost', '::1'].includes(options.host)) throw new GovernanceError('invalid_host', 'Prototype governance requires a loopback-only local server.');
   const repository = new SqliteWorkspaceRepository(options.databasePath);
   const workspaceService = new WorkspaceService(repository);
   const conversationRepository = new SqliteConversationRepository(options.databasePath);
@@ -399,16 +415,26 @@ export async function startStudioServer(options: StudioServerOptions) {
   const outcomeRepository = new SqliteOutcomeRepository(options.databasePath);
   const outcomes = new OutcomeService(outcomeRepository, repository, taskRepository, executionRepository);
   const knowledgeRepository = new SqliteKnowledgeRepository(options.databasePath);
-  const knowledge = new KnowledgeService(knowledgeRepository, repository, outcomeRepository, new ObsidianConnector(options.obsidianVaultRoot));
+  const governanceRepository = new SqliteGovernanceRepository(options.databasePath);
+  const governance = new GovernanceService(governanceRepository, prototypeGrants(options.knowledgePublication ?? 'review'));
+  const knowledge = new KnowledgeService(knowledgeRepository, repository, outcomeRepository, new ObsidianConnector(options.obsidianVaultRoot), governance);
+  const authority = new LocalAuthority();
+  const secrets = options.secretProvider ?? new EnvironmentSecretProvider({});
   const vite = options.dev
     ? await (await import('vite')).createServer({ server: { middlewareMode: true }, appType: 'spa' })
     : null;
 
   const server = createServer(async (request, response) => {
     const url = new URL(request.url ?? '/', `http://${request.headers.host ?? 'localhost'}`);
+    if (url.pathname === '/api/governance/session' || url.pathname === '/api/governance/secrets') {
+      if (!authority.actor(request)) sendJson(response, 403, { code: 'permission_denied', error: 'Use the trusted local owner surface.' });
+      else if (request.method !== 'GET') sendJson(response, 405, { error: 'Use GET.', code: 'method_not_allowed' });
+      else sendJson(response, 200, url.pathname.endsWith('/session') ? { session: authority.session(request), actor: { type: 'human', id: 'han-local' }, boundary: 'trusted-local-owner-not-authentication' } : { secrets: secrets.status(), usage: 'No live secret-use grants or real providers are enabled.' });
+      return;
+    }
     if (await handleAgentApi(request, response, agentInvocationService, url)) return;
     if (await handleCollaborationApi(request, response, orchestrator, url)) return;
-    if (await handleKnowledgeApi(request, response, knowledge, url)) return;
+    if (await handleKnowledgeApi(request, response, knowledge, authority, url)) return;
     if (await handleOutcomeApi(request, response, outcomes, url)) return;
     if (await handleExecutionApi(request, response, executions, url)) return;
     if (await handleTaskApi(request, response, taskService, url)) return;
@@ -445,6 +471,7 @@ export async function startStudioServer(options: StudioServerOptions) {
       executionRepository.close();
       outcomeRepository.close();
       knowledgeRepository.close();
+      governanceRepository.close();
     },
   };
 }

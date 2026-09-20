@@ -3,11 +3,14 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { KnowledgePanel } from '../src/app/knowledge/KnowledgePanel';
 import type { Knowledge } from '../src/core/knowledge/knowledge';
 
-function install(options: { previewError?: boolean; failSaveOnce?: boolean } = {}) {
+function install(options: { previewError?: boolean; failSaveOnce?: boolean; denied?: boolean; auditError?: boolean } = {}) {
   let record: Knowledge | undefined;
   let failures = options.failSaveOnce ? 1 : 0;
   const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
     const path = String(input);
+    if (path.endsWith('/governance/session')) return Response.json({ session: 'test-local-session' });
+    if (path.endsWith('/governance/secrets')) return Response.json({ secrets: [{ ref: 'provider.openai', status: 'unavailable' }] });
+    if (path.endsWith('/audit')) return options.auditError ? Response.json({ error: 'Audit unavailable' }, { status: 503 }) : Response.json({ events: [] });
     if (path.endsWith('/artifacts')) return Response.json({ artifacts: [{ id: 'artifact-a', title: 'Selected Artifact' }] });
     if (path.endsWith('/task-reports')) return Response.json({ reports: [{ id: 'report-a', task: { title: 'Selected Report' } }] });
     if (path.endsWith('/knowledge') && init?.method === 'POST') {
@@ -16,7 +19,7 @@ function install(options: { previewError?: boolean; failSaveOnce?: boolean } = {
       return Response.json({ record });
     }
     if (path.endsWith('/knowledge')) return Response.json({ records: record ? [record] : [] });
-    if (path.endsWith('/preview')) return options.previewError ? Response.json({ error: 'Configure the vault first.' }, { status: 503 }) : Response.json({ preview: { connectorId: 'obsidian-markdown', destinationId: 'vault-id', destinationLabel: 'Temporary vault', relativePath: 'Knowledge/AI-Studio-Generated/knowledge-a.md', markdown: '# Reviewed snapshot', token: `review-${record?.revision}` } });
+    if (path.endsWith('/preview')) return options.previewError ? Response.json({ error: 'Configure the vault first.' }, { status: 503 }) : Response.json({ preview: { connectorId: 'obsidian-markdown', destinationId: 'vault-id', destinationLabel: 'Temporary vault', relativePath: 'Knowledge/AI-Studio-Generated/knowledge-a.md', markdown: '# Reviewed snapshot', token: `review-${record?.revision}`, decision: { status: options.denied ? 'denied' : 'approval_required', reason: options.denied ? 'Publication disabled by local policy.' : 'HAN must approve this exact attempt.', reasonCode: options.denied ? 'no_grant' : 'review_required', grantId: options.denied ? null : 'test-grant' } } });
     if (path.endsWith('/save') && record) {
       record = { ...record, revision: record.revision + 1, status: failures-- > 0 ? 'failed' : 'saved', approvedAt: record.createdAt, destination: { connectorId: 'obsidian-markdown', destinationId: 'vault-id', relativePath: 'Knowledge/AI-Studio-Generated/knowledge-a.md' } };
       if (record.status === 'failed') { record = { ...record, failure: { code: 'write_failed', message: 'Disk unavailable.' } }; return Response.json({ record, error: 'Disk unavailable.' }, { status: 503 }); }
@@ -49,6 +52,7 @@ describe('Knowledge review UI', () => {
     const verify = await screen.findByRole('button', { name: 'Verify Saved Note' });
     expect(f.saves()).toHaveLength(1);
     expect(JSON.parse(String(f.saves()[0][1]?.body))).toEqual({ approved: true, previewToken: 'review-0' });
+    expect(f.saves()[0][1]?.headers).toMatchObject({ 'x-han-session': 'test-local-session' });
     fireEvent.click(verify); await screen.findByText(/Verified: the Markdown note matches/);
     first.unmount(); render(<KnowledgePanel workspaceId="workspace-a" />);
     await screen.findByRole('button', { name: 'Verify Saved Note' });
@@ -79,5 +83,16 @@ describe('Knowledge review UI', () => {
     vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('offline'))); render(<KnowledgePanel workspaceId="workspace-a" />);
     expect(await screen.findByRole('alert')).toHaveTextContent('Knowledge could not be loaded');
     await waitFor(() => expect(screen.getByRole('button', { name: 'Refresh Knowledge' })).toBeEnabled());
+  });
+  it('shows a denied decision and prevents UI approval/publication without hiding the candidate', async () => {
+    const f = install({ denied: true }); render(<KnowledgePanel workspaceId="workspace-a" />); await prepare();
+    expect(await screen.findByRole('alert')).toHaveTextContent('Authority: denied');
+    expect(screen.getByRole('checkbox')).toBeDisabled(); expect(screen.getByRole('button', { name: 'Save Reviewed Knowledge' })).toBeDisabled();
+    await screen.findByText('provider.openai · unavailable'); expect(f.saves()).toHaveLength(0);
+  });
+  it('surfaces audit loading failure in the advanced details instead of claiming there is no history', async () => {
+    install({ auditError: true }); render(<KnowledgePanel workspaceId="workspace-a" />); await prepare();
+    expect(await screen.findByText(/Governance details could not be loaded/)).toBeInTheDocument();
+    expect(screen.queryByText(/No Stage 11 attempts recorded/)).not.toBeInTheDocument();
   });
 });

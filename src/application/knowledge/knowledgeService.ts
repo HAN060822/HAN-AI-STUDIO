@@ -4,14 +4,17 @@ import type { OutcomeRepository } from '../outcomes/outcomeRepository.ts';
 import type { WorkspaceRepository } from '../workspaces/workspaceRepository.ts';
 import type { KnowledgeConnector } from './knowledgeConnector.ts';
 import type { KnowledgeRepository } from './knowledgeRepository.ts';
+import type { Actor, ActionIntent } from '../../core/governance/governance.ts';
+import type { GovernanceService } from '../governance/governanceService.ts';
 
 export class KnowledgeService {
   private readonly records: KnowledgeRepository;
   private readonly workspaces: WorkspaceRepository;
   private readonly outcomes: OutcomeRepository;
   private readonly connector: KnowledgeConnector;
-  constructor(records: KnowledgeRepository, workspaces: WorkspaceRepository, outcomes: OutcomeRepository, connector: KnowledgeConnector) {
-    this.records = records; this.workspaces = workspaces; this.outcomes = outcomes; this.connector = connector;
+  private readonly governance: GovernanceService;
+  constructor(records: KnowledgeRepository, workspaces: WorkspaceRepository, outcomes: OutcomeRepository, connector: KnowledgeConnector, governance: GovernanceService) {
+    this.records = records; this.workspaces = workspaces; this.outcomes = outcomes; this.connector = connector; this.governance = governance;
   }
   private requireWorkspace(workspaceId: string) {
     if (!this.workspaces.getById(workspaceId)) throw new KnowledgeError('not_found', 'Workspace was not found.');
@@ -58,14 +61,35 @@ export class KnowledgeService {
     const token = createHash('sha256').update(JSON.stringify([record, preview])).digest('hex');
     return { ...preview, token };
   }
-  save(workspaceId: string, id: string, value: unknown): Knowledge {
+  private publicationIntent(workspaceId: string, id: string, preview = this.preview(workspaceId, id)): ActionIntent {
+    return { action: 'EXTERNAL', resource: { type: 'knowledge', id }, scope: { kind: 'workspace', workspaceId }, consequence: { capability: `${preview.connectorId}.publish`, destinationId: preview.destinationId, fingerprint: preview.token } };
+  }
+  review(actor: Actor | null, workspaceId: string, id: string) {
+    const preview = this.preview(workspaceId, id);
+    return { ...preview, decision: this.governance.decide(actor, this.publicationIntent(workspaceId, id, preview)) };
+  }
+  governanceState(actor: Actor | null, workspaceId: string, id: string) {
+    this.get(workspaceId, id);
+    const events = this.governance.history(actor, workspaceId, id);
+    return { decision: this.governance.decide(actor, this.publicationIntent(workspaceId, id)), events };
+  }
+  audit(actor: Actor | null, workspaceId: string, id: string) {
+    this.get(workspaceId, id); return this.governance.history(actor, workspaceId, id);
+  }
+  save(actor: Actor | null, workspaceId: string, id: string, value: unknown): Knowledge {
     const body = value as Record<string, unknown> | null;
-    if (!body || body.approved !== true || typeof body.previewToken !== 'string' || Object.keys(body).some((key) => !['approved', 'previewToken'].includes(key))) {
+    if (!body || (body.approved !== undefined && typeof body.approved !== 'boolean') || typeof body.previewToken !== 'string' || Object.keys(body).some((key) => !['approved', 'previewToken'].includes(key))) {
       throw new KnowledgeError('approval_required', 'Review the preview and explicitly approve saving this Knowledge.');
     }
-    let record = this.get(workspaceId, id);
+    const record = this.get(workspaceId, id);
     const preview = this.preview(workspaceId, id);
     if (body.previewToken !== preview.token) throw new KnowledgeError('stale_preview', 'The candidate or destination changed. Refresh and review the preview before saving.');
+    return this.governance.run(actor, this.publicationIntent(workspaceId, id, preview), body.approved === true, () => {
+      const value = this.saveApprovedRecord(record, preview);
+      return { value, outcome: value.status === 'saved' ? 'succeeded' : 'failed', code: value.status === 'saved' ? 'ok' : 'connector_failed' };
+    });
+  }
+  private saveApprovedRecord(record: Knowledge, preview: ReturnType<KnowledgeService['preview']>): Knowledge {
     if (record.status === 'saved') {
       if (!this.connector.verify(record).matches) throw new KnowledgeError('note_changed', 'The saved note is missing or changed. No file was overwritten; inspect it in the vault.');
       return record;

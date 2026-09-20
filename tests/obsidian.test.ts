@@ -1,3 +1,4 @@
+import { LOCAL_HAN } from '../src/core/governance/governance.ts';
 import { linkSync, mkdirSync, readFileSync, readdirSync, symlinkSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
@@ -15,7 +16,7 @@ describe('Obsidian filesystem boundary (temporary vaults only)', () => {
     expect(filename).not.toContain('..'); expect(filename).not.toContain('\\');
     expect(renderKnowledgeMarkdown(record)).toContain('title: "../CON: \\"x\\"\\n---');
     const preview = f.knowledge.preview('workspace-a', record.id);
-    const saved = f.knowledge.save('workspace-a', record.id, { approved: true, previewToken: preview.token });
+    const saved = f.knowledge.save(LOCAL_HAN, 'workspace-a', record.id, { approved: true, previewToken: preview.token });
     expect(saved.status).toBe('saved');
     expect(readFileSync(join(f.vault, preview.relativePath), 'utf8')).toBe(renderKnowledgeMarkdown(saved));
   });
@@ -29,7 +30,7 @@ describe('Obsidian filesystem boundary (temporary vaults only)', () => {
   it('never overwrites an existing different note and leaves no temporary write behind', () => {
     const f = fixture(); const record = f.knowledge.create('workspace-a', manualKnowledge); const preview = f.knowledge.preview('workspace-a', record.id);
     mkdirSync(join(f.vault, OBSIDIAN_DESTINATION), { recursive: true }); writeFileSync(join(f.vault, preview.relativePath), 'Existing human note', 'utf8');
-    const failed = f.knowledge.save('workspace-a', record.id, { approved: true, previewToken: preview.token });
+    const failed = f.knowledge.save(LOCAL_HAN, 'workspace-a', record.id, { approved: true, previewToken: preview.token });
     expect(failed).toMatchObject({ status: 'failed', failure: { code: 'note_conflict' } });
     expect(readFileSync(join(f.vault, preview.relativePath), 'utf8')).toBe('Existing human note');
     expect(readdirSync(join(f.vault, OBSIDIAN_DESTINATION))).toHaveLength(1);
@@ -51,7 +52,7 @@ describe('Obsidian filesystem boundary (temporary vaults only)', () => {
   it('surfaces a destination blocked by a file and retains all source data', () => {
     const f = fixture(); const record = f.knowledge.create('workspace-a', manualKnowledge); const preview = f.knowledge.preview('workspace-a', record.id);
     writeFileSync(join(f.vault, 'Knowledge'), 'Existing content');
-    expect(() => f.knowledge.save('workspace-a', record.id, { approved: true, previewToken: preview.token })).toThrow(/non-directory/);
+    expect(() => f.knowledge.save(LOCAL_HAN, 'workspace-a', record.id, { approved: true, previewToken: preview.token })).toThrow(/non-directory/);
     expect(f.knowledge.get('workspace-a', record.id)).toEqual(record);
     expect(readFileSync(join(f.vault, 'Knowledge'), 'utf8')).toBe('Existing content');
   });
@@ -59,16 +60,16 @@ describe('Obsidian filesystem boundary (temporary vaults only)', () => {
     const f = fixture(); const record = f.knowledge.create('workspace-a', manualKnowledge); const preview = f.knowledge.preview('workspace-a', record.id);
     const outside = join(f.directory, 'outside.md'); writeFileSync(outside, 'Protected outside content');
     mkdirSync(join(f.vault, OBSIDIAN_DESTINATION), { recursive: true }); linkSync(outside, join(f.vault, preview.relativePath));
-    const failed = f.knowledge.save('workspace-a', record.id, { approved: true, previewToken: preview.token });
+    const failed = f.knowledge.save(LOCAL_HAN, 'workspace-a', record.id, { approved: true, previewToken: preview.token });
     expect(failed).toMatchObject({ status: 'failed', failure: { code: 'unsafe_path' } });
     expect(readFileSync(outside, 'utf8')).toBe('Protected outside content');
   });
   it('detects a human edit on verify and repeat save without replacing the edit', () => {
     const f = fixture(); const record = f.knowledge.create('workspace-a', manualKnowledge); const preview = f.knowledge.preview('workspace-a', record.id);
-    f.knowledge.save('workspace-a', record.id, { approved: true, previewToken: preview.token });
+    f.knowledge.save(LOCAL_HAN, 'workspace-a', record.id, { approved: true, previewToken: preview.token });
     writeFileSync(join(f.vault, preview.relativePath), 'Human revision');
     expect(f.knowledge.verify('workspace-a', record.id).matches).toBe(false);
-    expect(() => f.knowledge.save('workspace-a', record.id, { approved: true, previewToken: f.knowledge.preview('workspace-a', record.id).token })).toThrow(/missing or changed/);
+    expect(() => f.knowledge.save(LOCAL_HAN, 'workspace-a', record.id, { approved: true, previewToken: f.knowledge.preview('workspace-a', record.id).token })).toThrow(/missing or changed/);
     expect(readFileSync(join(f.vault, preview.relativePath), 'utf8')).toBe('Human revision');
   });
 });

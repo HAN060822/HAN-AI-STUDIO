@@ -15,7 +15,9 @@ describe('Knowledge HTTP boundary (temporary vault only)', () => {
     let server = await startStudioServer(options);
     function base() { const address = server.server.address(); if (!address || typeof address === 'string') throw new Error(); return `http://127.0.0.1:${address.port}`; }
     async function request(path: string, method = 'GET', body?: unknown) {
-      const response = await fetch(`${base()}${path}`, { method, headers: { 'content-type': 'application/json' }, body: body === undefined ? undefined : JSON.stringify(body) });
+      const headers: Record<string, string> = { 'content-type': 'application/json' };
+      if (path.endsWith('/save')) headers['x-han-session'] = ((await (await fetch(`${base()}/api/governance/session`)).json()) as { session: string }).session;
+      const response = await fetch(`${base()}${path}`, { method, headers, body: body === undefined ? undefined : JSON.stringify(body) });
       return { status: response.status, body: await response.json() as { workspace: { id: string }; record: Knowledge; records: Knowledge[]; preview: KnowledgePreview & { token: string }; verification: { matches: boolean }; code: string } };
     }
     try {
@@ -31,7 +33,7 @@ describe('Knowledge HTTP boundary (temporary vault only)', () => {
       expect((await request(`/api/workspaces/missing/knowledge/${created.body.record.id}`)).status).toBe(404);
       const preview = (await request(`${item}/preview`)).body.preview;
       expect(existsSync(join(vault, 'Knowledge'))).toBe(false);
-      expect((await request(`${item}/save`, 'POST', { previewToken: preview.token })).status).toBe(400);
+      expect((await request(`${item}/save`, 'POST', { previewToken: preview.token })).status).toBe(409);
       expect((await request(`${item}/save`, 'POST', { approved: true, previewToken: 'old' })).status).toBe(409);
       expect((await request(`${item}/verify`)).status).toBe(409);
       const saved = await request(`${item}/save`, 'POST', { approved: true, previewToken: preview.token });
