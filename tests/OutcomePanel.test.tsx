@@ -9,7 +9,7 @@ import type { Task } from '../src/core/tasks/task';
 const task: Task = { id: 'task-a', workspaceId: 'workspace-a', sourceChatId: null, title: 'Formal outcome Task', goal: 'Preserve a formal outcome.', status: 'completed', createdAt: '2026-09-16T00:00:00.000Z', updatedAt: '2026-09-16T01:00:00.000Z', completedAt: '2026-09-16T01:00:00.000Z', schemaVersion: 1 };
 const execution: Execution = { id: 'execution-a', workspaceId: 'workspace-a', taskId: 'task-a', runtimeId: 'prototype-local', status: 'completed', plan: { mode: 'sequential', goal: 'Produce output', steps: [{ id: 'step-1', agentId: 'agent-gpt' }] }, checkpoint: { nextStepIndex: 1, currentStepId: null, contributions: [{ agentId: 'agent-gpt', agentDisplayName: 'GPT', stepId: 'step-1', output: 'Formal Mock output', providerId: 'mock', modelId: 'mock-basic', mode: 'mock', status: 'succeeded', handoff: null }] }, pendingControl: null, pauseAfterStep: false, failure: null, createdAt: '2026-09-16T00:10:00.000Z', startedAt: '2026-09-16T00:11:00.000Z', updatedAt: '2026-09-16T00:12:00.000Z', finishedAt: '2026-09-16T00:12:00.000Z', revision: 3, schemaVersion: 1 };
 
-function install() {
+function install(loseFirstArtifactResponse = false) {
   let artifacts: Artifact[] = [];
   let reports: TaskReport[] = [];
   const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
@@ -19,7 +19,9 @@ function install() {
     if (path.endsWith('/artifacts') && init?.method === 'POST') {
       const body = JSON.parse(String(init.body));
       const artifact: Artifact = { id: 'artifact-a', workspaceId: 'workspace-a', taskId: task.id, title: body.title, kind: body.kind, content: execution.checkpoint.contributions[0].output, provenance: { executionId: execution.id, contributionStepId: 'step-1', agentId: 'agent-gpt', agentDisplayName: 'GPT', providerId: 'mock', modelId: 'mock-basic', mode: 'mock' }, createdAt: '2026-09-16T02:00:00.000Z', updatedAt: '2026-09-16T02:00:00.000Z', schemaVersion: 1 };
-      artifacts = [artifact]; return new Response(JSON.stringify({ artifact }), { status: 201 });
+      artifacts = [artifact];
+      if (loseFirstArtifactResponse) { loseFirstArtifactResponse = false; throw new Error('Response lost after commit'); }
+      return new Response(JSON.stringify({ artifact }), { status: 201 });
     }
     if (path.endsWith('/artifacts')) return new Response(JSON.stringify({ artifacts }));
     if (path.endsWith('/task-reports') && init?.method === 'POST') {
@@ -35,6 +37,23 @@ function install() {
 afterEach(() => vi.unstubAllGlobals());
 
 describe('Artifact and Task Report UI', () => {
+  it('retries a lost preservation response with the same creation identity and merges a refreshed saved record once', async () => {
+    const f = install(true); const view = render(<OutcomePanel workspaceId="workspace-a" />);
+    await screen.findByText(/No formal Artifact/);
+    fireEvent.change(screen.getByLabelText('Artifact title'), { target: { value: 'Retry-safe result' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Preserve Artifact' }));
+    expect(await screen.findByRole('alert')).toHaveTextContent('save is not confirmed');
+    fireEvent.click(screen.getByRole('button', { name: 'Refresh Outcomes' }));
+    await screen.findByRole('heading', { name: 'Retry-safe result' });
+    fireEvent.click(screen.getByRole('button', { name: 'Preserve Artifact' }));
+    await waitFor(() => expect(screen.getByLabelText('Artifact title')).toHaveValue(''));
+    const requests = f.fetchMock.mock.calls.filter(([path, init]) => String(path).endsWith('/artifacts') && init?.method === 'POST').map(([, init]) => JSON.parse(String(init?.body)));
+    expect(requests).toHaveLength(2); expect(requests[1]).toEqual(requests[0]); expect(requests[0].creationId).toMatch(/^[0-9a-f-]{36}$/);
+    expect(screen.getByRole('heading', { name: 'Preserved Artifacts · 1' })).toBeInTheDocument();
+    view.unmount(); render(<OutcomePanel workspaceId="workspace-a" />);
+    await screen.findByRole('heading', { name: 'Retry-safe result' });
+    expect(f.fetchMock.mock.calls.filter(([, init]) => init?.method === 'POST')).toHaveLength(2);
+  });
   it('preserves a selected contribution and displays formal provenance separately from raw output', async () => {
     const f = install(); render(<OutcomePanel workspaceId="workspace-a" />);
     await screen.findByText(/No formal Artifact/);

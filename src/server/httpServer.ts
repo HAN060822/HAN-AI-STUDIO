@@ -243,10 +243,11 @@ async function handleOutcomeApi(request: IncomingMessage, response: ServerRespon
     } else if (resource === 'artifacts' && !id && request.method === 'POST') {
       const body = await readJson(request);
       if (body.taskId !== undefined && body.taskId !== null && typeof body.taskId !== 'string') throw new OutcomeError('invalid_input', 'Task ID must be a string or null.');
-      for (const field of ['content', 'sourceExecutionId', 'sourceContributionStepId'] as const) {
+      for (const field of ['creationId', 'content', 'sourceExecutionId', 'sourceContributionStepId'] as const) {
         if (body[field] !== undefined && typeof body[field] !== 'string') throw new OutcomeError('invalid_input', `${field} must be a string.`);
       }
       sendJson(response, 201, { artifact: service.createArtifact(workspaceId, {
+        creationId: typeof body.creationId === 'string' ? body.creationId : undefined,
         title: body.title as string, kind: body.kind as ArtifactKind, taskId: stringOrNull(body.taskId),
         content: typeof body.content === 'string' ? body.content : undefined,
         sourceExecutionId: typeof body.sourceExecutionId === 'string' ? body.sourceExecutionId : undefined,
@@ -264,10 +265,9 @@ async function handleOutcomeApi(request: IncomingMessage, response: ServerRespon
       sendJson(response, 200, { report: service.getTaskReport(workspaceId, id) });
     } else sendJson(response, 405, { error: 'Outcome method is not supported.', code: 'method_not_allowed' });
   } catch (error) {
-    if (error instanceof OutcomeError) sendJson(response, error.code === 'invalid_input' ? 400 : 404, { error: error.message, code: error.code });
+    if (error instanceof OutcomeError) sendJson(response, error.code === 'invalid_input' ? 400 : error.code === 'creation_conflict' ? 409 : 404, { error: error.message, code: error.code });
     else {
-      console.error('Outcome persistence request failed:', error);
-      sendJson(response, 503, { error: 'Outcome persistence is unavailable. No Artifact or Task Report was saved.', code: 'persistence_unavailable' });
+      sendJson(response, 503, { error: 'Outcome persistence is unavailable. Save is not confirmed; refresh to inspect outcomes before retrying.', code: 'persistence_unavailable' });
     }
   }
   return true;
@@ -422,10 +422,6 @@ export async function startStudioServer(options: StudioServerOptions) {
   const knowledge = new KnowledgeService(knowledgeRepository, repository, outcomeRepository, new ObsidianConnector(options.obsidianVaultRoot), governance);
   const authority = new LocalAuthority();
   const secrets = options.secretProvider ?? new EnvironmentSecretProvider({});
-  const vite = options.dev
-    ? await (await import('vite')).createServer({ server: { middlewareMode: true }, appType: 'spa' })
-    : null;
-
   const server = createServer(async (request, response) => {
     const url = new URL(request.url ?? '/', `http://${request.headers.host ?? 'localhost'}`);
     const telemetryPath = url.pathname.match(/^\/api\/workspaces\/([^/]+)\/executions\/([^/]+)\/telemetry$/);
@@ -468,11 +464,29 @@ export async function startStudioServer(options: StudioServerOptions) {
     await serveProductionFile(request, response);
   });
 
-  await new Promise<void>((resolvePromise, reject) => {
-    server.once('error', reject);
-    server.listen(options.port ?? 5173, options.host ?? '127.0.0.1', resolvePromise);
-  });
-  executions.recoverInterrupted();
+  // Share the local HTTP listener: isolated development instances must not contend
+  // for Vite's global default HMR port or connect to another instance's updates.
+  const vite = options.dev
+    ? await (await import('vite')).createServer({ server: { middlewareMode: true, ws: { server } }, appType: 'spa' })
+    : null;
+
+  const closeRepositories = () => {
+    repository.close(); conversationRepository.close(); taskRepository.close(); executionRepository.close();
+    outcomeRepository.close(); knowledgeRepository.close(); governanceRepository.close(); telemetryRepository.close();
+  };
+  try {
+    await new Promise<void>((resolvePromise, reject) => {
+      server.once('error', reject);
+      server.listen(options.port ?? 5173, options.host ?? '127.0.0.1', resolvePromise);
+    });
+    executions.recoverInterrupted();
+  } catch (error) {
+    // Invalid recovery must fail explicitly, without leaving a half-started listener.
+    await vite?.close();
+    if (server.listening) await new Promise<void>((done) => server.close(() => done()));
+    closeRepositories();
+    throw error;
+  }
 
   return {
     server,
@@ -480,14 +494,7 @@ export async function startStudioServer(options: StudioServerOptions) {
       await executions.close();
       await vite?.close();
       await new Promise<void>((resolvePromise, reject) => server.close((error) => error ? reject(error) : resolvePromise()));
-      repository.close();
-      conversationRepository.close();
-      taskRepository.close();
-      executionRepository.close();
-      outcomeRepository.close();
-      knowledgeRepository.close();
-      governanceRepository.close();
-      telemetryRepository.close();
+      closeRepositories();
     },
   };
 }

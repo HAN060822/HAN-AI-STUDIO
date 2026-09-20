@@ -7,7 +7,7 @@ import { TASK_REPORT_SCHEMA_VERSION, type TaskReport } from '../../core/outcomes
 import type { OutcomeRepository } from './outcomeRepository.ts';
 
 export class OutcomeError extends Error {
-  readonly code: 'invalid_input' | 'not_found' | 'scope_mismatch';
+  readonly code: 'invalid_input' | 'not_found' | 'scope_mismatch' | 'creation_conflict';
   constructor(code: OutcomeError['code'], message: string) { super(message); this.name = 'OutcomeError'; this.code = code; }
 }
 
@@ -49,6 +49,7 @@ export class OutcomeService {
 
   createArtifact(workspaceId: string, input: CreateArtifactInput): Artifact {
     this.requireWorkspace(workspaceId);
+    if (input.creationId !== undefined && (typeof input.creationId !== 'string' || !/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(input.creationId))) throw new OutcomeError('invalid_input', 'Artifact creation ID must be a UUID v4.');
     const title = this.requiredText(input.title, 'Artifact title', 180);
     if (!isArtifactKind(input.kind)) throw new OutcomeError('invalid_input', 'Choose document, result, or note as the Artifact kind.');
     let taskId = input.taskId ?? null;
@@ -75,8 +76,14 @@ export class OutcomeService {
       content = this.requiredText(input.content, 'Artifact content', 100_000);
       provenance = { executionId: null, contributionStepId: null, agentId: null, agentDisplayName: null, providerId: null, modelId: null, mode: null };
     }
+    const id = input.creationId?.toLowerCase() ?? this.createId();
+    const existing = input.creationId ? this.outcomes.getArtifactById(id) : null;
+    if (existing) {
+      if (existing.workspaceId !== workspaceId || existing.taskId !== taskId || existing.title !== title || existing.kind !== input.kind || existing.content !== content || JSON.stringify(existing.provenance) !== JSON.stringify(provenance)) throw new OutcomeError('creation_conflict', 'Artifact creation ID already belongs to a different preservation request. Reload to inspect saved outcomes.');
+      return existing;
+    }
     const timestamp = this.now().toISOString();
-    return this.outcomes.createArtifact({ id: this.createId(), workspaceId, taskId, title, kind: input.kind, content, provenance, createdAt: timestamp, updatedAt: timestamp, schemaVersion: ARTIFACT_SCHEMA_VERSION });
+    return this.outcomes.createArtifact({ id, workspaceId, taskId, title, kind: input.kind, content, provenance, createdAt: timestamp, updatedAt: timestamp, schemaVersion: ARTIFACT_SCHEMA_VERSION });
   }
 
   listTaskReports(workspaceId: string): TaskReport[] {

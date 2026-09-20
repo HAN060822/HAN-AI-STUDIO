@@ -86,6 +86,7 @@ export class KnowledgeService {
     if (body.previewToken !== preview.token) throw new KnowledgeError('stale_preview', 'The candidate or destination changed. Refresh and review the preview before saving.');
     return this.governance.run(actor, this.publicationIntent(workspaceId, id, preview), body.approved === true, () => {
       const value = this.saveApprovedRecord(record, preview);
+      if (record.status === 'saved') return { value, outcome: 'not_executed', code: 'already_saved_verified' };
       return { value, outcome: value.status === 'saved' ? 'succeeded' : 'failed', code: value.status === 'saved' ? 'ok' : 'connector_failed' };
     });
   }

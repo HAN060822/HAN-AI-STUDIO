@@ -1,13 +1,13 @@
 # HAN's AI STUDIO — Build State
 
 - **Current Version:** 0.0.0
-- **Current Stage:** Stage 12 — Context + Usage Telemetry
+- **Current Stage:** Stage 13 — End-to-End Integration & Recovery
 - **Stage Status:** Builder complete — automated and controlled real-browser verification passed; awaiting Architect review and HAN acceptance; NOT PUSHED; NOT SEALED
-- **Latest Completed Stage:** Stage 12 (builder complete); Stages 0–11 are complete, PUSHED and SEALED per HAN's Stage 12 handoff.
-- **Latest Git Commit:** `HEAD` — single local `Complete Phase 9 Stage 12 context and usage telemetry` commit; obtain its exact self-referential hash with `git rev-parse HEAD`.
-- **Baseline Commit:** `4c7afe677450900d02525823978ffbc60776a35c` — `Complete Phase 9 Stage 11 permissions secrets and audit`; clean synchronized `main` / `origin/main` before Stage 12. Continued implementation preserves the existing Stage 12 working tree.
+- **Latest Completed Stage:** Stage 13 (builder complete); Stages 0–12 are accepted, PUSHED and SEALED per HAN's Stage 13 handoff.
+- **Latest Git Commit:** `HEAD` — single local `Complete Phase 9 Stage 13 end-to-end integration and recovery` commit; obtain its exact self-referential hash with `git rev-parse HEAD`.
+- **Baseline Commit:** `acf817d014592234ccd56007305f751a61d4438c` — `Complete Phase 9 Stage 12 context and usage telemetry`; synchronized `main` / `origin/main` before Stage 13. Resumed work preserved the existing Stage 13 edits and continued the unfinished verification/documentation checkpoint, without resetting or restarting implementation.
 - **Working Branch:** `main`
-- **Planned Engine Direction (not implemented):** The earlier LibreChat Hybrid Engine proposal remains deferred planning. HAN's current Stage 12 handoff authorizes only Context + Usage Telemetry on the existing Mock execution path. No engine adoption/rejection decision, Ponytail or Builder Harness change is included.
+- **Planned Engine Direction (not implemented):** The earlier LibreChat Hybrid Engine proposal remains deferred planning. HAN's Stage 13 handoff authorizes integration/recovery of the existing Mock execution path only. No engine adoption/rejection decision, Ponytail, Jev or Builder Harness change is included.
 
 ## What Works
 
@@ -55,10 +55,15 @@
 - Stage 12 formalizes the existing explicit goal/action/immediate handoff as a bounded Context Package, with metadata-only source/reason/size/truncation/omission provenance and reference-only Workspace/Task/Execution scope.
 - Actual Mock-backed Executions receive per-invocation/context identities, normalized explicitly synthetic usage, monotonic adapter timing and append-oriented SQLite telemetry. Unknown provider usage/cost remains unknown; no Chat/Knowledge/vault/Secret/Audit retrieval is added.
 - Collapsed Execution **Advanced: Context & Usage** lazily inspects Agent/Provider/Model, result, usage, duration and context metadata with visible fetch errors/retry and unconfirmed-final states. Exact telemetry survives reload/full server restart without replay or historical backfill.
+- Stage 13 real HTTP/SQLite integration covers Chat-linked Task → two-Agent Execution → formal Artifact/Task Report → reviewed Knowledge → permission/approval/audit → Obsidian → read-only verification → full server restart. Task planning state remains independent, and Chat text is not silently included in provider context.
+- Artifact preservation retains a caller UUID for an unchanged in-panel retry after an uncertain response. Exact retries return the same immutable Artifact; conflicting reuse returns 409. Refresh merges by identity and never automatically resubmits.
+- Re-saving already-saved Knowledge still requires fresh reviewed authority, but audits read-only confirmation as `not_executed / already_saved_verified`, not another publication success. Original unmatched audit/telemetry starts are never rewritten or backfilled.
+- Execution reads and startup recovery validate checkpoint consistency before presenting/using it. Invalid state fails explicitly without invented repair; failed startup recovery releases the HTTP listener and repositories.
+- Development Vite updates share that instance's HTTP listener instead of contending for a separate global HMR port. Normal `npm.cmd run dev` was verified through two full stop/start cycles using isolated Stage 13 data/vault overrides.
 
 ## Incomplete Work
 
-- Real provider/engine integration, broad governance of other capabilities, and later-stage Prototype 0 features remain deferred. Stage 13 is NOT STARTED. Stage 11 does not retrofit all internal/Mock actions; Stage 12 telemetry grants no authority.
+- Real provider/engine integration, broad governance of other capabilities, and later-stage Prototype 0 features remain deferred. Stage 14 is NOT STARTED. Stage 11 does not retrofit all internal/Mock actions; Stage 12 telemetry grants no authority.
 - Real AI-generated Chat replies, real-provider inference, Task Agent assignment, message deletion, chat archive/delete, and cross-workspace move/copy are intentionally not implemented.
 - Parallel collaboration, intelligent planning/convergence, standalone collaboration history, and final multi-Agent Chat UX are deferred. Mock echo output proves routing/context/provenance, not intelligence or semantic agreement.
 - Collaboration goal limit is 500 characters; previous contribution handoff limit is 800 characters and truncation may omit trailing context. Standalone Stage 7 results remain transient; contributions inside Stage 8 Executions are durable.
@@ -70,16 +75,20 @@
 - Prototype policy is code/config-backed; revocation requires restart. No IAM, login, policy dashboard, OS secret vault, cryptographic audit ledger, retention/rotation or multi-process ownership exists. Audit guards application history, not against a database owner removing triggers. Secret consumers are trusted synchronous server code; an asynchronous real adapter needs a separately reviewed contract.
 - Stage 12 persists telemetry for Workspace Executions only; standalone Home invocation/collaboration measurements remain transient. Metadata fingerprints are equality evidence, not anonymization. Context isolation is not a DLP filter for explicit user text. No tokenizer, automatic context optimizer, billing/pricing, model router, RAG, cloud analytics or event warehouse is implemented.
 - Telemetry finalization and Execution checkpoints are not one transaction. Unmatched starts remain in-flight/unconfirmed; a committed final event may outlive an uncommitted contribution after a crash. Existing Interrupted/no-replay policy remains authoritative; no automatic reconciliation or retry is added.
+- Artifact creation IDs protect one explicit retry intent, not global content deduplication. Legacy callers omitting the optional ID keep deliberate-create behavior. The pending form/ID is transient across a full page reload; inspect fetched saved outcomes before starting a new preservation intent. No offline queue or automatic replay is added.
+- Stage 13 checkpoint validation is not general database salvage, migration backup or hardware/power-loss recovery. Automated abrupt-stop testing injects the durable in-flight checkpoint shape into a disposable fixture; browser testing actually restarts the dev process at safe boundaries. Open selections, drafts, unchecked approval and standalone Home results remain transient. Independent engineering panels retain explicit Refresh controls.
 
 ## Known Errors
 
-- No known Stage 12 test/build errors. Stage 12 browser smoke used isolated production port 5174 because a pre-existing development server occupied 5173; the existing process was left alone. The narrow browser viewport can require horizontal scrolling in existing Prototype panels; no application layout redesign was made.
+- No known Stage 13 application test/build errors or blockers. One full-suite attempt had a jsdom worker module-loading error before its tests started; the installed file loaded directly and the unchanged full rerun passed 229/229 without errors. No dependency/configuration change or warning suppression was used. Existing narrow-viewport Prototype panels can require horizontal scrolling; no Stage 14 layout redesign was made.
 - Historical Stage 11 observation: read-only real-vault inspection found the Stage 10 smoke note absent while its local Knowledge record remained saved. Stage 12 did not read or modify that vault, recreate the note, or infer who removed it.
 
 ## Tests Status
 
-- `npm.cmd test`: passed (37 test files, 220 tests) with no React `act(...)` warnings. All 194 Stage 1–11 regression tests remain green plus 26 Stage 12 context/usage/telemetry/API/UI cases. Automated writes use temporary databases/vaults only.
+- `npm.cmd test`: passed (39 test files, 229 tests) with no React `act(...)` warnings or unhandled errors on the final run. All 220 Stage 0–12 tests remain green plus 9 Stage 13 cross-module/UI recovery cases. Automated writes use temporary databases/vaults only.
+- Stage 13 focused run: 24 tests in 5 files passed (`serverIntegration`, `knowledgeRecovery`, `OutcomePanel`, `telemetry`, `executionPersistence`). Covers failure/uncertainty, fresh review, no-overwrite, retry identity, terminal-state rejection, invalid recovery and resource cleanup.
 - `npm.cmd run build`: passed (strict browser/server TypeScript checks and Vite production bundle, 48 modules).
+- Stage 13 real-browser smoke (2026-09-21, Asia/Kuala_Lumpur): normal `npm.cmd run dev` on loopback 5174, isolated `var/stage13-browser/data` and `vault`, Mock providers and reviewed publication. Task → GPT pause → browser refresh → full restart → Gemini Resume → completed → Artifact + Report → Artifact Knowledge review/Save/Verify; Report candidate deliberately remains unsaved. Second full restart and browser reopen retained exact IDs and rows: 1 Workspace, 1 Task, 1 Execution/2 contributions, 1 Artifact, 1 Report, 2 Knowledge records, 1 consumed approval, 2 audits, 4 telemetry events/2 invocations. All nine table-content hashes and the single note hash remained identical; SQLite integrity/FK checks passed; browser warnings/errors empty. Exact note path and evidence: `docs/STAGE-13-VERIFICATION.md`. Owned smoke server was stopped; no real-vault notes were accessed or modified in Stage 13.
 - Stage 12 controlled real-browser smoke: built production runtime `npm.cmd start` on 127.0.0.1:5174 with isolated data and publication denied. Created `Stage 12 Context Usage Smoke`, ran GPT → Gemini through Start/Pause/Resume/Completed, inspected synthetic-not-billing usage, unknown cost and bounded metadata. Full server restart and fresh browser reopen retained the same two invocations/four events byte-for-byte; SQLite integrity/FK checks passed. Browser warning/error log empty. No Knowledge/Audit events or Obsidian note created. Evidence: `docs/STAGE-12-VERIFICATION.md`.
 - Stage 11 real-browser smoke: normal `npm.cmd run dev` with isolated data/vault process overrides; denied policy visible, denied request 403 and no-approval request 409 created zero notes; explicit browser approval created exactly one temporary note; byte Verify, four audit events and one consumed approval survived full restart. Browser warning/error log empty; Mock invocation regression passed.
 - Stage 11 real vault: read-only check of 105 Markdown files was hash-stable; historical Stage 10 disposable note is absent. No Stage 11 real-vault note created and no existing real-vault note changed. Temporary smoke data remains ignored in `var/stage11-browser/` for review.
@@ -90,7 +99,7 @@
 - Stage 9 real-browser smoke passed in separate `Stage 9 outcome verification`: Task → completed two-Agent Execution → final contribution → formal Artifact → deterministic Task Report. Artifact/report identity, content, provenance and references survived browser reload and full dev-server restart. Browser error/warning log was empty.
 - Stage 10 real-browser smoke passed in isolated `Stage 10 knowledge verification`: Task → two-Agent Mock Execution → Artifact → reviewed Knowledge → explicit Save → real UTF-8 Markdown → Verify. Task Report/manual candidates remained unsaved. Reload and full server restart retained identities, content, provenance and path; browser warning/error log was empty. Exact note path and evidence are in `docs/STAGE-10-VERIFICATION.md`.
 - Real-vault before/after SHA-256 comparison: 91 existing notes unchanged, one clearly identifiable disposable Stage 10 note added in the dedicated generated destination; no canonical architecture notes modified.
-- `git diff --check`: passed; no runtime database, secret, local env, generated build output, or dependency change is included in the Stage 12 commit. Ignored Stage 12 smoke data remains local-only in `var/stage12-browser/`.
+- `git diff --check`: passed; no runtime database, secret, local env, generated build output, migration, or dependency change is included in the Stage 13 commit. Ignored Stage 13 smoke data and its one disposable note remain local-only in `var/stage13-browser/` for review.
 - Real API and 12-Task UI smoke verification passed for Workspace, Chat, Message, and Task data, including stable Task identity, active/closed classification, goal/state, and optional source Chat relation across refresh and runtime restart.
 - `npm ci`: clean lockfile install completed during Stage 0; npm audit reported 0 vulnerabilities.
 
@@ -147,6 +156,7 @@
 - Additive Migration 9 creates ordered unique start/final invocation telemetry with restrictive scope references and append-only triggers. Existing migrations and historical rows are not rewritten or backfilled.
 - Telemetry-start persistence failure prevents the provider call as an operational error, not an authority denial. Final telemetry failure retains successful output with an unconfirmed marker; provider failures get safe failure records when possible. Context failure makes no provider call and preserves completed work. No automatic replay.
 - Usage is provider-reported, explicitly Mock/synthetic, or unavailable. Invalid/missing counters become unknown, never inferred billing; cost is null. Monotonic duration excludes SQL writes and human pauses; UTC start/completion are separate timestamps.
+- Stage 13 repairs recovery boundaries without replacing sealed services: additive optional Artifact creation UUID, truthful already-saved audit result, checkpoint read/startup validation and isolated dev HMR binding. No lifecycle, permission grant, context bound, schema or provider redesign.
 
 ## Changed Interfaces
 
@@ -174,10 +184,12 @@
 - New configuration: `HAN_AI_STUDIO_KNOWLEDGE_PUBLICATION=review|deny` (unknown values deny), and optional server-only `HAN_AI_STUDIO_SECRET_OPENAI/GEMINI/GITHUB/ENGINE`. No credentials were added; vault path remains configuration, not a SecretRef. Non-loopback deployment is rejected.
 - Stage 12 adds read-only GET `/api/workspaces/:workspaceId/executions/:executionId/telemetry`, guarded by the existing trusted local-owner check and persisted scope validation. Invalid scope is 404, untrusted origin 403, non-GET 405, malformed URI 400, read fault 503; errors are safe and visible.
 - Context Package/Snapshot and Usage/Telemetry contracts extend the existing Runtime → Orchestrator → Invocation → Adapter path. Provider requests add invocation/context IDs; responses add optional normalized usage; invocation results/contributions add optional measurements, preserving old records. No new configuration, dependency or provider.
+- Stage 13 Artifact POST accepts optional UUID-v4 `creationId`; validated exact repeats return the stored Artifact (201, existing response shape), mismatched intent 409 `creation_conflict`, malformed ID 400. Unknown persistence errors describe unconfirmed save, not a false guarantee of rollback.
+- Stage 13 adds safe audit code `already_saved_verified` using the existing `not_executed` outcome. Execution list/get/control rejects inconsistent checkpoints with 409 `invalid_checkpoint`; startup recovery rejects invalid running checkpoints without repair or replay. No new endpoint or environment variable.
 
 ## Uncommitted Work
 
-- None after the single local Stage 12 completion commit. Ignored `.env.local`, runtime databases/sidecars, smoke data and `dist/` remain local-only and excluded. Main is one local commit ahead of the unchanged origin/main baseline. No push performed.
+- None after the single local Stage 13 completion commit. Ignored `.env.local`, runtime databases/sidecars, smoke data and `dist/` remain local-only and excluded. Main is one local commit ahead of the unchanged origin/main Stage 12 baseline. No push performed.
 
 ## Blockers
 
@@ -185,7 +197,7 @@
 
 ## Next Exact Action
 
-STOP for HAN + ChatGPT Stage 12 architecture/functional review and HAN acceptance using `docs/STAGE-12-VERIFICATION.md`. Do not push. Do not begin Stage 13 without explicit authorization.
+STOP for HAN + ChatGPT Stage 13 architecture/functional review and HAN acceptance using `docs/STAGE-13-VERIFICATION.md`. Do not push. Do not begin Stage 14.
 
 ## Relevant Architecture Documents
 
@@ -197,9 +209,10 @@ STOP for HAN + ChatGPT Stage 12 architecture/functional review and HAN acceptanc
 - `docs/STAGE-10-VERIFICATION.md` — Knowledge/Obsidian approval loop, exact real-vault disposable note path, persistence/retry evidence, limitations and Architect review points.
 - `docs/STAGE-11-VERIFICATION.md` — exact governance contracts/enforcement, failure policy, isolated browser evidence, real-vault observation and Architect review points.
 - `docs/STAGE-12-VERIFICATION.md` — current Context/Usage contracts, bounds, privacy, failure semantics, persistence and actual browser/restart evidence. `docs/STAGE-12-ENGINE-INTEGRATION.md` is historical deferred planning, not this stage's gate.
+- `docs/STAGE-13-VERIFICATION.md` — closed-loop integration, exact browser/restart evidence and disposable note path, retry/uncertainty policy, test coverage and limitations.
 
 ## Stage Gate
 
-- **Current Stage:** Stage 12 — Context + Usage Telemetry
+- **Current Stage:** Stage 13 — End-to-End Integration & Recovery
 - **Stage Status:** Builder complete — awaiting Architect review and HAN acceptance; NOT PUSHED; NOT SEALED
-- **Stage 13:** NOT STARTED
+- **Stage 14:** NOT STARTED

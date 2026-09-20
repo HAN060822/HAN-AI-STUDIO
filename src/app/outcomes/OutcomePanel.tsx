@@ -1,4 +1,4 @@
-import { type FormEvent, useEffect, useMemo, useState } from 'react';
+import { type FormEvent, useEffect, useMemo, useRef, useState } from 'react';
 import type { Artifact, ArtifactKind } from '../../core/outcomes/artifact';
 import type { TaskReport } from '../../core/outcomes/taskReport';
 import type { Execution } from '../../core/executions/execution';
@@ -20,6 +20,7 @@ export function OutcomePanel({ workspaceId }: { workspaceId: string }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [refresh, setRefresh] = useState(0);
+  const preservation = useRef<{ intent: string; creationId: string } | null>(null);
 
   useEffect(() => {
     let active = true;
@@ -45,12 +46,15 @@ export function OutcomePanel({ workspaceId }: { workspaceId: string }) {
   async function preserve(event: FormEvent) {
     event.preventDefault();
     const selected = sources.find((item) => item.key === source);
-    if (!task || !selected) return;
+    if (!task || !selected || busy) return;
+    const input = { title, kind, taskId: task.id, sourceExecutionId: selected.execution.id, sourceContributionStepId: selected.contribution.stepId };
+    const intent = JSON.stringify([workspaceId, input]);
+    if (preservation.current?.intent !== intent) preservation.current = { intent, creationId: crypto.randomUUID() };
     setBusy(true); setError('');
     try {
-      const artifact = await outcomeApi.createArtifact(workspaceId, { title, kind, taskId: task.id, sourceExecutionId: selected.execution.id, sourceContributionStepId: selected.contribution.stepId });
-      setArtifacts((current) => [artifact, ...current]); setTitle('');
-    } catch (reason) { setError(reason instanceof Error ? reason.message : 'Artifact could not be preserved.'); }
+      const artifact = await outcomeApi.createArtifact(workspaceId, { ...input, creationId: preservation.current.creationId });
+      setArtifacts((current) => [artifact, ...current.filter((item) => item.id !== artifact.id)]); setTitle(''); preservation.current = null;
+    } catch { setError('Artifact save is not confirmed. Refresh to inspect saved outcomes, or retry this unchanged form safely.'); }
     finally { setBusy(false); }
   }
 

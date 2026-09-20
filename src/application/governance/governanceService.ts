@@ -2,7 +2,7 @@ import { randomUUID } from 'node:crypto';
 import { GovernanceError, safeActor, safeIntent, scopeContains, type Actor, type ActionIntent, type Approval, type AuditCode, type AuditEvent, type PermissionDecision, type PermissionGrant } from '../../core/governance/governance.ts';
 import type { GovernanceRepository } from './governanceRepository.ts';
 
-export type ActionResult<T> = { value: T; outcome: 'succeeded' | 'failed'; code: AuditCode };
+export type ActionResult<T> = { value: T; outcome: 'succeeded' | 'failed' | 'not_executed'; code: AuditCode };
 export class GovernanceService {
   private readonly repository: GovernanceRepository;
   private readonly grants: readonly PermissionGrant[];

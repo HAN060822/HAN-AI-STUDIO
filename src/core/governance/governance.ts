@@ -25,7 +25,7 @@ export type Approval = Readonly<{
   createdAt: string; expiresAt: string; schemaVersion: number;
 }>;
 export type AuditOutcome = 'not_executed' | 'started' | 'succeeded' | 'failed' | 'unconfirmed';
-export type AuditCode = 'ok' | 'no_authority' | 'no_grant' | 'review_required' | 'invalid_approval' | 'connector_failed' | 'secret_unavailable' | 'secret_use_failed' | 'action_unconfirmed';
+export type AuditCode = 'ok' | 'already_saved_verified' | 'no_authority' | 'no_grant' | 'review_required' | 'invalid_approval' | 'connector_failed' | 'secret_unavailable' | 'secret_use_failed' | 'action_unconfirmed';
 export type AuditEvent = Readonly<{
   id: string; attemptId: string; timestamp: string; actor: Actor | null; intent: ActionIntent;
   decision: PermissionDecision; approvalId: string | null; outcome: AuditOutcome; code: AuditCode; schemaVersion: number;

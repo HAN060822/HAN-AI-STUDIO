@@ -44,7 +44,10 @@ export function isExecutionAction(value: unknown): value is ExecutionAction { re
 
 export function assertExecutionCheckpoint(execution: Execution): void {
   const { checkpoint, plan, status } = execution;
-  if (!Number.isInteger(checkpoint.nextStepIndex) || checkpoint.nextStepIndex !== checkpoint.contributions.length || checkpoint.nextStepIndex > plan.steps.length || checkpoint.contributions.some((item, index) => item.stepId !== plan.steps[index]?.id || item.agentId !== plan.steps[index]?.agentId || item.status !== 'succeeded') || (checkpoint.currentStepId !== null && checkpoint.currentStepId !== plan.steps[checkpoint.nextStepIndex]?.id) || (status === 'completed' && checkpoint.nextStepIndex !== plan.steps.length) || (status === 'paused' && checkpoint.currentStepId !== null)) {
+  if (!Object.hasOwn(transitions, status) || !plan || !Array.isArray(plan.steps) || plan.steps.length < 1 || plan.steps.length > 3 || plan.steps.some((step) => !step || typeof step.id !== 'string' || typeof step.agentId !== 'string') || new Set(plan.steps.map((step) => step.id)).size !== plan.steps.length || !checkpoint || !Array.isArray(checkpoint.contributions)) {
+    throw new ExecutionError('invalid_checkpoint', 'Execution checkpoint is inconsistent; no work was started.');
+  }
+  if (!Number.isInteger(checkpoint.nextStepIndex) || checkpoint.nextStepIndex !== checkpoint.contributions.length || checkpoint.nextStepIndex > plan.steps.length || checkpoint.contributions.some((item, index) => !item || item.stepId !== plan.steps[index]?.id || item.agentId !== plan.steps[index]?.agentId || item.status !== 'succeeded' || typeof item.output !== 'string' || !item.output.trim()) || (checkpoint.currentStepId !== null && checkpoint.currentStepId !== plan.steps[checkpoint.nextStepIndex]?.id) || (status === 'completed' && (checkpoint.nextStepIndex !== plan.steps.length || checkpoint.currentStepId !== null)) || (status === 'paused' && checkpoint.currentStepId !== null) || (status === 'created' && (checkpoint.nextStepIndex !== 0 || checkpoint.currentStepId !== null))) {
     throw new ExecutionError('invalid_checkpoint', 'Execution checkpoint is inconsistent; no work was started.');
   }
 }

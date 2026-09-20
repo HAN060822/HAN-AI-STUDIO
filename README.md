@@ -4,7 +4,7 @@ Local-first personal multi-agent AI workspace. The repository is being built ver
 
 ## Current status
 
-Phase 9 / Stage 12 adds bounded Context packages and local Usage Telemetry above sealed Stages 0–11. Actual Mock-backed Executions now retain inspectable context provenance, usage and timing without storing context text in telemetry. Stage 12 is builder-complete, awaiting Architect review and HAN acceptance; NOT PUSHED, NOT SEALED. Stage 13 has not started. No Builder Harness or engine change is included.
+Phase 9 / Stage 13 integrates and verifies the existing Stage 0–12 closed loop across refresh, server restart and failure boundaries. Narrow repairs add retry-safe Artifact preservation, truthful repeat-save audit evidence and explicit invalid-checkpoint rejection. Stage 13 is builder-complete, awaiting Architect review and HAN acceptance; NOT PUSHED, NOT SEALED. Stages 0–12 are sealed; Stage 14 has not started. No real provider, Builder Harness or engine change is included.
 
 ## Prerequisites
 
@@ -42,6 +42,14 @@ See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for the selected stack and boun
 Workspaces are stored in `var/studio.sqlite` by default. Set `HAN_AI_STUDIO_DATA_DIR` to use a different local data directory. SQLite files and sidecars are ignored by Git. Workspace names do not act as identity; stable UUIDs survive rename, archive, restore, refresh, and runtime restart.
 
 GPT and Gemini have explicit deterministic Mock test bindings; real providers remain disconnected. Open a Workspace to use Prototype Executions and preserve committed contributions as formal text Artifacts. See [Stage 9 verification](docs/STAGE-9-VERIFICATION.md) for the outcome loop and [Stage 8 verification](docs/STAGE-8-VERIFICATION.md) for control/recovery limits. The global intent form remains an interface preview.
+
+## Integration & recovery
+
+Use a Workspace → Task → Prototype Execution with the default pause-after-step option. After the first contribution, refresh/reopen the Workspace or restart the server; Resume continues only the next incomplete step. Completed/cancelled/failed/interrupted attempts do not resume. An uncertain in-flight call found after restart becomes Interrupted, never silently replayed. Inconsistent checkpoints fail explicitly rather than displaying invented progress.
+
+Use **Refresh Outcomes** to load completed contributions, deliberately preserve an Artifact and generate the Task Report; **Refresh Knowledge** then loads those formal sources for review. An uncertain Artifact response retains one creation identity for an unchanged in-panel retry. Full page reload does not replay a request or retain the draft: inspect the fetched outcomes before starting a new intent. Reports retain one current identity per Task. Already-saved Knowledge retries verify the note and record `not_executed / already_saved_verified`, not another publication success; fresh reviewed authority is still required. Read-only Verify creates no audit event and never overwrites an edited note.
+
+See [Stage 13 verification](docs/STAGE-13-VERIFICATION.md) for the closed-loop tests, isolated-vault browser procedure, actual refresh/restart evidence, exact disposable note path and uncertainty limits. Development HMR shares the configured HTTP port, so isolated instances do not compete for a separate default HMR port. Continue to use one server per database.
 
 ## Context & Usage
 

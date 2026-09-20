@@ -54,11 +54,11 @@ Add explicit capabilities, local secret references, approvals, audit events, and
 
 HAN's current Stage 12 Builder Handoff narrows this gate to the existing Mock-backed Execution → Orchestrator → Agent → Provider path: explicit bounded Context packages, metadata-only provenance, normalized honest usage, monotonic duration and append-oriented local telemetry. Unknown usage/cost remains unknown; no automatic Chat/Knowledge/vault loading. **Exit:** actual execution context and usage are inspectable after reload/restart, failures remain truthful, all Stage 1–11 regressions pass, and Architect/HAN review accepts the stage.
 
-The earlier LibreChat/EngineAdapter/MCP/RAG proof in `docs/STAGE-12-ENGINE-INTEGRATION.md` is retained as deferred planning, not a requirement or completed capability of this authorized stage. No engine adoption/rejection decision, Builder Harness change or later-stage work is implied. Stages 13–14 below remain historical roadmap candidates requiring their own current handoffs; Stage 13 is NOT STARTED.
+The earlier LibreChat/EngineAdapter/MCP/RAG proof in `docs/STAGE-12-ENGINE-INTEGRATION.md` is retained as deferred planning, not a requirement or completed capability of this authorized stage. No engine adoption/rejection decision or Builder Harness change is implied. Stage 12 is sealed per HAN; Stage 13 below follows its separately authorized current handoff. Stage 14 remains a historical roadmap candidate and is NOT STARTED.
 
 ## Stage 13 — End-to-End Integration & Recovery
 
-Exercise the complete loop across the selected engine boundary; add restart/crash recovery, migration backup, corrupt-state handling, cancellation preservation, engine/provider/MCP/RAG failure handling, and E2E tests. Preserve useful committed work and avoid silent replay of uncertain external actions. **Exit:** main and recovery paths pass from clean and existing data, including bounded engine failure cases.
+Integrate the existing Workspace/Chat/Task → Agent/Orchestrator/Execution → Context/Mock/Telemetry → Artifact/Task Report → Knowledge → approval/permission/audit → Obsidian/verification path. Prove refresh, paused resume, restart continuity, terminal-state retention, useful-work preservation and truthful uncertainty. Repair only observed retry/recovery gaps; preserve sealed Stage 0–12 contracts. No engine/MCP/RAG, real provider, new workflow engine, migration-backup system or Stage 14 UX redesign. **Exit:** focused/full tests, production build, browser closed loop, full server-restart verification, diff checks and documentation pass; one local commit; stop for review without pushing. Evidence: `docs/STAGE-13-VERIFICATION.md`.
 
 ## Stage 14 — Prototype 0 Release Candidate
 

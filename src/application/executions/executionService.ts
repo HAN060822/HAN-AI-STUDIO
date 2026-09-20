@@ -42,6 +42,7 @@ export class ExecutionService {
   list(workspaceId: string): Execution[] {
     this.requireWorkspace(workspaceId);
     const rows = this.repository.listForWorkspace(workspaceId);
+    rows.forEach(assertExecutionCheckpoint);
     if (rows.some((row) => this.storageFaults.has(row.id))) throw new ExecutionError('persistence_unavailable', 'Execution checkpoint could not be saved. Work stopped; restart to inspect the last durable checkpoint.');
     return rows;
   }
@@ -50,6 +51,7 @@ export class ExecutionService {
     if (this.storageFaults.has(id)) throw new ExecutionError('persistence_unavailable', 'Execution checkpoint could not be saved. Work stopped; restart to inspect the last durable checkpoint.');
     const execution = this.repository.getById(id);
     if (!execution || execution.workspaceId !== workspaceId) throw new ExecutionError('not_found', 'Execution was not found in this Workspace.');
+    assertExecutionCheckpoint(execution);
     return execution;
   }
 
@@ -117,6 +119,7 @@ export class ExecutionService {
   // Called once after the server has successfully bound its port, before accepting work.
   recoverInterrupted(): void {
     for (const execution of this.repository.listRunning(this.runtime.id)) {
+      assertExecutionCheckpoint(execution);
       const step = execution.plan.steps[execution.checkpoint.nextStepIndex];
       this.transition({ ...execution, failure: { code: 'runtime_interrupted', message: 'The previous runtime stopped. The last durable checkpoint is retained; an unrecorded in-flight result may be lost. No automatic replay was attempted.', stepId: step?.id ?? 'finished-steps', agentId: step?.agentId ?? execution.plan.steps[0].agentId } }, 'interrupted');
     }

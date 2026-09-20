@@ -26,6 +26,8 @@ export type Artifact = Readonly<{
 }>;
 
 export type CreateArtifactInput = Readonly<{
+  // Optional caller-generated UUID retained for retries of one immutable creation intent.
+  creationId?: string;
   title: string;
   kind: ArtifactKind;
   taskId?: string | null;

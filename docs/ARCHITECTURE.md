@@ -305,6 +305,28 @@ GET `/api/workspaces/:workspaceId/executions/:executionId/telemetry` returns `{ 
 
 Execution detail adds a collapsed, lazy-loaded **Advanced: Context & Usage**. It groups start/final events by invocation, shows attribution, bounds/provenance/omissions, synthetic or unavailable usage, unknown cost, duration and result, with explicit load error/retry and unconfirmed-final states. Execution revision or manual Refresh reloads open details. Historical/unstarted runs show no-recorded-telemetry, not fabricated zeros. No global dashboard or main UX redesign is added. See `docs/STAGE-12-VERIFICATION.md` for automated and real-browser evidence.
 
+## Stage 13 End-to-End Integration & Recovery
+
+Stage 13 connects and verifies the existing modular monolith rather than replacing any Stage 0–12 contract. Workspace/Chat/Task persistence, Agent identity, deterministic Orchestrator, safe-boundary Execution runtime, Context/Mock/Telemetry, formal outcomes, reviewed Knowledge, governed Obsidian publication and read-only verification remain separate components. No new schema migration, dependency, provider, permission grant, scheduler, workflow engine or Builder Harness is introduced.
+
+### Retry identity and evidence truth
+
+Artifact POST adds optional UUID-v4 `creationId`, used as the existing Artifact primary key. Existing callers may omit it and retain deliberate-create semantics. After normal scope/source/content validation, an exact repeated canonical preservation request returns the stored immutable Artifact; a different Workspace, Task, title, kind, content or provenance with the same ID returns 409 `creation_conflict`. This is one creation intent, not content deduplication: another deliberately generated identity may preserve another Artifact. Synchronous service execution and the existing SQLite primary key suffice for the single-server Prototype; distributed idempotency is out of scope.
+
+The outcome form retains an intent fingerprint and UUID through an uncertain response and unchanged in-panel retry, disables concurrent submission and merges returned/fetched Artifacts by identity. Failure retains the draft and says the save is unconfirmed, not falsely rolled back. Full reload/remount performs reads only; drafts and pending creation IDs are intentionally transient, so inspect saved outcomes before beginning a new preservation intent. Task Report regeneration continues to update the one current report per Task with its stable identity.
+
+The already-saved Knowledge branch already verified bytes without publishing. Stage 13 now reports that fact to governance as the existing `not_executed` outcome with safe code `already_saved_verified`, rather than another publication success. The same fresh preview, permission, human approval, consumed-approval/start audit and final evidence requirements still apply. The prior attempt's unmatched audit start remains unmatched; retry never invents its missing final. Ordinary GET Verify remains read-only and creates no audit or approval. A pending record whose note exists can still be confirmed by a fresh reviewed retry using Stage 10's identical-byte/no-overwrite connector behavior.
+
+### Recovery validation and development isolation
+
+Execution get/list now applies the same checkpoint guard used by lifecycle operations; startup checks a running checkpoint before converting it to Interrupted. Structural guards reject unknown status, missing/invalid bounded plan/checkpoint shape, duplicate step identities, inconsistent contribution/index/Agent/output, or impossible Created/Paused/Completed checkpoint combinations. Invalid recoverable shape returns `invalid_checkpoint`, not invented progress, work or data repair. This is a bounded invariant check, not generic database corruption recovery. No domain schema or valid lifecycle is changed.
+
+Startup recovery still runs after successfully binding the server, before accepting work. If binding/recovery fails, initialized Vite, listener and repository connections are closed rather than leaving a half-started runtime. Persisted invalid state is retained for inspection. Paused attempts resume only the next incomplete step; terminal attempts never resume; uncertain running attempts become Interrupted without provider replay. Telemetry and Execution checkpoint transactions remain separate and preserve their existing uncertainty policy.
+
+In development, Vite 8's `server.ws.server` attaches HMR to the application's HTTP server. Isolated dev instances therefore do not contend for the global default HMR port or consume another instance's updates. Normal startup/configuration and the existing watch scope remain unchanged. Use one server per database, including isolated smoke runs.
+
+Real HTTP/SQLite restart tests, controlled fault tests and a real-browser normal-dev closed loop are recorded in `docs/STAGE-13-VERIFICATION.md`. Operational metadata, approval/audit and external note hashes remain unchanged across the tested restart/read-only inspection. No real AI, Ponytail, Jev, Stage 14 redesign or unrelated vault access is included.
+
 ## Stage 0 decisions (historical)
 
 1. Use one TypeScript package while Prototype 0 remains a modular monolith.
@@ -323,7 +345,7 @@ Execution detail adds a collapsed, lazy-loaded **Advanced: Context & Usage**. It
 
 ## Planned Hybrid Agent Engine Boundary (historical Stage 12 candidate; deferred)
 
-The 2026-09-18 LibreChat architecture harvest proposed the following generic engine strategy. HAN's subsequent Stage 12 Context + Usage Telemetry handoff excludes this experiment from the current stage. The direction is preserved for future authorization, not implemented or evaluated here; Stage 13 is NOT STARTED.
+The 2026-09-18 LibreChat architecture harvest proposed the following generic engine strategy. HAN's subsequent Stage 12 Context + Usage Telemetry and Stage 13 End-to-End Integration & Recovery handoffs exclude this experiment. The direction is preserved for future authorization, not implemented or evaluated here; Stage 14 is NOT STARTED.
 
 **Current implemented boundary:**
 
