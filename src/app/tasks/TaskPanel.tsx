@@ -29,7 +29,7 @@ export function TaskPanel({ workspaceId, taskId, onClose, onChanged, compact = f
   const nextStatuses = allowedTaskTransitions(task.status);
 
   return <section className={`task-panel${compact ? ' task-panel-compact' : ''}`} aria-labelledby={`task-title-${task.id}`}>
-    <div className="task-panel-nav"><button type="button" onClick={onClose}>← Back to Tasks</button><span>Persistent work object · execution is not connected</span></div>
+    <div className="task-panel-nav"><button type="button" onClick={onClose}>← Back to Tasks</button><span>Task planning state · separate from Execution progress</span></div>
     {controller.error && <div className="workspace-error" role="alert">{controller.error}</div>}
     {editing ? <form className="task-edit-form" onSubmit={save}>
       <label htmlFor={`task-title-input-${task.id}`}>Task title</label><input id={`task-title-input-${task.id}`} value={title} onChange={(event) => setTitle(event.target.value)} maxLength={180} required />
@@ -37,7 +37,9 @@ export function TaskPanel({ workspaceId, taskId, onClose, onChanged, compact = f
       <div><button type="submit" disabled={controller.saving}>Save Task</button><button type="button" className="quiet-button" onClick={() => { setTitle(task.title); setGoal(task.goal); setEditing(false); }}>Cancel</button></div>
     </form> : <>
       <div className="task-panel-heading"><div><p className="eyebrow">Task · {statusLabel[task.status]}</p><h2 id={`task-title-${task.id}`}>{task.title}</h2><p className="task-goal">{task.goal}</p></div><button type="button" onClick={() => setEditing(true)}>Edit</button></div>
-      <dl className="task-details"><div><dt>Status</dt><dd>{statusLabel[task.status]}</dd></div><div><dt>Source Chat</dt><dd>{task.sourceChatId ?? 'None — Workspace Task'}</dd></div><div><dt>Task ID</dt><dd>{task.id}</dd></div><div><dt>Updated</dt><dd>{new Date(task.updatedAt).toLocaleString()}</dd></div>{task.completedAt && <div><dt>Completed</dt><dd>{new Date(task.completedAt).toLocaleString()}</dd></div>}</dl>
+      <dl className="task-details"><div><dt>Status</dt><dd>{statusLabel[task.status]}</dd></div><div><dt>Updated</dt><dd>{new Date(task.updatedAt).toLocaleString()}</dd></div>{task.completedAt && <div><dt>Completed</dt><dd>{new Date(task.completedAt).toLocaleString()}</dd></div>}</dl>
+      <details className="inspect-details"><summary>Inspect Task</summary><dl className="task-details"><div><dt>Source Chat</dt><dd>{task.sourceChatId ?? 'None — Workspace Task'}</dd></div><div><dt>Task ID</dt><dd>{task.id}</dd></div></dl></details>
+      <p>Use Prototype Executions in this Workspace for Mock work. Changing this planning state does not start, pause or complete an Execution.</p>
       <div className="task-transitions"><span>Change planning state</span>{nextStatuses.length ? nextStatuses.map((status) => <button type="button" key={status} disabled={controller.saving} onClick={() => void transition(status)}>{statusLabel[status]}</button>) : <strong>Terminal state</strong>}</div>
     </>}
   </section>;

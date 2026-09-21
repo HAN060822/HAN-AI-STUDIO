@@ -37,6 +37,22 @@ function install(loseFirstArtifactResponse = false) {
 afterEach(() => vi.unstubAllGlobals());
 
 describe('Artifact and Task Report UI', () => {
+  it('keeps deliberate preservation in Normal and exposes optional kind/provenance through inspection', async () => {
+    const f = install(); render(<OutcomePanel workspaceId="workspace-a" />);
+    await screen.findByText(/No formal Artifact/);
+    expect(screen.getByLabelText('Artifact kind')).not.toBeVisible();
+    fireEvent.click(screen.getByText('Advanced: Artifact kind · result'));
+    fireEvent.change(screen.getByLabelText('Artifact kind'), { target: { value: 'note' } });
+    fireEvent.change(screen.getByLabelText('Artifact title'), { target: { value: 'Inspectable note' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Preserve Artifact' }));
+    await screen.findByRole('heading', { name: 'Inspectable note' });
+    expect(f.artifacts()[0].kind).toBe('note');
+    expect(screen.getByText('Artifact ID: artifact-a')).not.toBeVisible();
+    expect(within(screen.getByLabelText('Preserved Artifacts')).getByText('Formal Mock output')).toBeVisible();
+    fireEvent.click(screen.getByText('Inspect Artifact provenance'));
+    expect(screen.getByText('Artifact ID: artifact-a')).toBeVisible();
+  });
+
   it('retries a lost preservation response with the same creation identity and merges a refreshed saved record once', async () => {
     const f = install(true); const view = render(<OutcomePanel workspaceId="workspace-a" />);
     await screen.findByText(/No formal Artifact/);
@@ -57,7 +73,7 @@ describe('Artifact and Task Report UI', () => {
   it('preserves a selected contribution and displays formal provenance separately from raw output', async () => {
     const f = install(); render(<OutcomePanel workspaceId="workspace-a" />);
     await screen.findByText(/No formal Artifact/);
-    expect(screen.getByRole('option', { name: /execution-a · step-1 · GPT/ })).toBeInTheDocument();
+    expect(screen.getByRole('option', { name: /Produce output · step-1 · GPT/ })).toBeInTheDocument();
     fireEvent.change(screen.getByLabelText('Artifact title'), { target: { value: 'UI formal result' } });
     fireEvent.click(screen.getByRole('button', { name: 'Preserve Artifact' }));
     const list = await screen.findByLabelText('Preserved Artifacts');

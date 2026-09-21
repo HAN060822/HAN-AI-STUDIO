@@ -87,29 +87,33 @@ export function ExecutionPanel({ workspaceId }: { workspaceId: string }) {
 
   return <section className="execution-panel section-block" aria-labelledby="executions-heading">
     <h2 id="executions-heading">Prototype Executions</h2>
-    <p>Execution is a durable runtime attempt, not Task planning state. No production providers are connected.</p>
+    <p>Run deterministic Mock work and keep its contributions. Execution progress is separate from Task planning state; real providers are not connected.</p>
     <button type="button" disabled={busy} onClick={() => setAttempt((value) => value + 1)}>Refresh Executions</button>
     {error && <p role="alert">{error}</p>}
     {loading ? <p role="status">Loading Executions…</p> : <>
       <form onSubmit={create}><fieldset disabled={busy || targets.length === 0}>
         <legend>New Execution</legend>
-        <label htmlFor="execution-task">Linked Task (optional)</label><select id="execution-task" value={taskId} onChange={(event) => setTaskId(event.target.value)}><option value="">Standalone Workspace request</option>{tasks.map((task) => <option key={task.id} value={task.id}>{task.title}</option>)}</select>
+        <label htmlFor="execution-task">Linked Task (optional)</label><select id="execution-task" value={taskId} onChange={(event) => { const id = event.target.value; setTaskId(id); const taskGoal = tasks.find((task) => task.id === id)?.goal; if (!goal.trim() && taskGoal && taskGoal.length <= 500) setGoal(taskGoal); }}><option value="">Standalone Workspace request</option>{tasks.map((task) => <option key={task.id} value={task.id}>{task.title}</option>)}</select>
+        <p>Link a Task to preserve Artifacts and a Task Report through this screen. After creating a Task above, Refresh Executions to load it. A Task goal fills an empty goal below only when it fits the 500-character limit.</p>
         <label htmlFor="execution-goal">Execution goal (snapshot, 500 characters maximum)</label><textarea id="execution-goal" required maxLength={500} value={goal} onChange={(event) => setGoal(event.target.value)} />
+        <p aria-label="Execution setup">{participants.map((id) => targets.find((target) => target.agentId === id)?.displayName ?? id).join(' → ') || 'No participants selected'} · {mode === 'review' ? 'Review / Challenge' : 'Sequential'} · {pauseAfterStep ? 'Pauses between steps; use Resume to continue.' : 'Runs all steps unless paused or cancelled.'} Mock test backends only.</p>
+        <details className="inspect-details"><summary>Advanced: Execution setup</summary>
         <label htmlFor="execution-mode">Execution collaboration mode</label><select id="execution-mode" value={mode} onChange={(event) => setMode(event.target.value as CollaborationMode)}><option value="sequential">Sequential</option><option value="review">Review / Challenge</option></select>
         <p>Participants · selected order</p>{targets.map((target) => <label key={target.agentId}><input type="checkbox" checked={participants.includes(target.agentId)} onChange={(event) => setParticipants((ids) => event.target.checked ? [...ids, target.agentId] : ids.filter((id) => id !== target.agentId))} /> {target.displayName} · {target.backendMode.toUpperCase()} backend</label>)}
-        <p>{participants.join(' → ') || 'No participants selected'}</p>
         <label><input type="checkbox" checked={pauseAfterStep} onChange={(event) => setPauseAfterStep(event.target.checked)} /> Pause after each completed step (safe-boundary demo)</label>
         <p>This stops before the next step, not inside the provider call. Resume continues from the saved checkpoint.</p>
+        </details>
         <button type="submit" disabled={!goal.trim() || participants.length === 0 || (mode === 'review' && participants.length !== 2)}>Create Execution</button>
       </fieldset></form>
       {targets.length === 0 && <p>No executable backend is configured. Existing Executions remain inspectable.</p>}
-      <div className="execution-list" aria-label="Execution history">{rows.length === 0 ? <p>No Executions yet.</p> : rows.map((row) => <button type="button" key={row.id} aria-pressed={selected === row.id} onClick={() => setSelected(row.id)}>{row.plan.goal} · {row.status} · {row.id}</button>)}</div>
+      <div className="execution-list" aria-label="Execution history">{rows.length === 0 ? <p>No Executions yet.</p> : rows.map((row, index) => <button type="button" key={row.id} aria-pressed={selected === row.id} onClick={() => setSelected(row.id)}>{index + 1}. {row.plan.goal} · {row.status}</button>)}</div>
       {execution && <article aria-label="Execution detail">
-        <h3>Execution · {execution.status}</h3><p>ID: {execution.id}</p><p>Linked Task: {execution.taskId ?? 'None — standalone request'}</p><p>Goal: {execution.plan.goal}</p>
-        <p>Runtime: {execution.runtimeId} · Mode: {execution.plan.mode}</p><p>Participants: {execution.plan.steps.map((step) => step.agentId).join(' → ')}</p>
-        <p>Completed steps: {execution.checkpoint.nextStepIndex} / {execution.plan.steps.length}</p><p>Recorded in-flight step: {execution.checkpoint.currentStepId ?? 'None'} · Next incomplete step: {execution.plan.steps[execution.checkpoint.nextStepIndex]?.id ?? 'None'}</p>
+        <h3>Execution · {execution.status}</h3><p>Goal: {execution.plan.goal}</p>
+        <p>Task: {tasks.find((task) => task.id === execution.taskId)?.title ?? (execution.taskId ? 'Linked Task — see Inspect' : 'None — standalone request')}</p>
+        <p>Completed steps: {execution.checkpoint.nextStepIndex} / {execution.plan.steps.length}</p>
+        {execution.status === 'paused' && <p>Work is saved. Resume continues from the next incomplete step; completed contributions are not repeated.</p>}
+        {execution.checkpoint.contributions.some((item) => item.measurement?.telemetry === 'unconfirmed') && <p role="alert">Useful output is saved, but some usage evidence is unconfirmed. Inspect Context &amp; Usage; do not rerun merely to replace missing telemetry.</p>}
         {isTerminalExecution(execution.status) && <p>Terminal Execution; no further steps will run.</p>}
-        <p>Created: {execution.createdAt} · Started: {execution.startedAt ?? 'Not started'} · Updated: {execution.updatedAt} · Finished: {execution.finishedAt ?? 'Not finished'}</p>
         {execution.pendingControl && <p role="status">{execution.pendingControl} requested — waiting for the current call to settle; the provider call is not suspended.</p>}
         <div className="execution-controls">
           {execution.status === 'created' && <button type="button" disabled={busy || !!error} onClick={() => void control('start')}>Start Execution</button>}
@@ -118,8 +122,9 @@ export function ExecutionPanel({ workspaceId }: { workspaceId: string }) {
           {!isTerminalExecution(execution.status) && <button type="button" disabled={busy || !!error || execution.pendingControl === 'cancel'} onClick={() => void control('cancel')}>Cancel Execution</button>}
         </div>
         {execution.failure && <p role="alert">{execution.failure.stepId} · {execution.failure.agentId}: {execution.failure.message} ({execution.failure.code})</p>}
-        <ol>{execution.checkpoint.contributions.map((item) => <li key={item.stepId}><h4>{item.stepId} · {item.agentDisplayName}</h4><strong>{item.mode === 'mock' ? 'MOCK · TEST CONTRIBUTION' : 'REAL · CONTRIBUTION'}</strong><p className="collaboration-output">{item.output}</p><small>Agent {item.agentId} · Provider {item.providerId} · Model {item.modelId}</small></li>)}</ol>
+        <ol>{execution.checkpoint.contributions.map((item) => <li key={item.stepId}><h4>{item.stepId} · {item.agentDisplayName}</h4><strong>{item.mode === 'mock' ? 'MOCK · TEST CONTRIBUTION' : 'REAL · CONTRIBUTION'}</strong><p className="collaboration-output">{item.output}</p><details className="inspect-details"><summary>Inspect contribution provenance</summary><small>Agent {item.agentId} · Provider {item.providerId} · Model {item.modelId}</small></details></li>)}</ol>
         {execution.status === 'completed' ? <p>Final contribution: {execution.checkpoint.contributions.at(-1)?.agentDisplayName} · {execution.checkpoint.contributions.at(-1)?.stepId}</p> : <p>No completed final result. Preserved contributions remain available above.</p>}
+        <details className="inspect-details"><summary>Inspect Execution checkpoint</summary><p>ID: {execution.id}</p><p>Linked Task: {execution.taskId ?? 'None — standalone request'}</p><p>Runtime: {execution.runtimeId} · Mode: {execution.plan.mode}</p><p>Participants: {execution.plan.steps.map((step) => step.agentId).join(' → ')}</p><p>Recorded in-flight step: {execution.checkpoint.currentStepId ?? 'None'} · Next incomplete step: {execution.plan.steps[execution.checkpoint.nextStepIndex]?.id ?? 'None'}</p><p>Created: {execution.createdAt} · Started: {execution.startedAt ?? 'Not started'} · Updated: {execution.updatedAt} · Finished: {execution.finishedAt ?? 'Not finished'}</p></details>
         <ContextUsageDetails key={execution.id} execution={execution} />
       </article>}
     </>}

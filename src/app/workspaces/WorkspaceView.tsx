@@ -14,8 +14,6 @@ type WorkspaceViewProps = {
   onClose: () => void;
 };
 
-const futureRooms = ['Projects', 'Assets', 'History'];
-
 export function WorkspaceView({ workspace, controller, onClose }: WorkspaceViewProps) {
   const [editing, setEditing] = useState(false);
   const [openChatId, setOpenChatId] = useState<string | null>(null);
@@ -42,14 +40,14 @@ export function WorkspaceView({ workspace, controller, onClose }: WorkspaceViewP
         <label htmlFor="edit-workspace-name">Workspace name</label><input id="edit-workspace-name" value={name} onChange={(event) => setName(event.target.value)} maxLength={120} required />
         <label htmlFor="edit-workspace-description">Description</label><textarea id="edit-workspace-description" value={description} onChange={(event) => setDescription(event.target.value)} maxLength={1000} />
         <div><button type="submit" disabled={controller.saving}>{controller.saving ? 'Saving…' : 'Save changes'}</button><button type="button" className="quiet-button" onClick={() => setEditing(false)}>Cancel</button></div>
-      </form> : <div className="workspace-hero-copy"><p className="eyebrow">Workspace</p><h1>{workspace.name}</h1><p>{workspace.description || 'A persistent place, ready for its purpose.'}</p><div className="workspace-meta"><span>Status · {workspace.status}</span><span>Created · {new Date(workspace.createdAt).toLocaleString()}</span><span>Updated · {new Date(workspace.updatedAt).toLocaleString()}</span><span>ID · {workspace.id}</span></div></div>}
+      </form> : <div className="workspace-hero-copy"><p className="eyebrow">Workspace</p><h1>{workspace.name}</h1><p>{workspace.description || 'Tasks, conversations and committed results stay here.'}</p><details className="inspect-details"><summary>Inspect Workspace</summary><div className="workspace-meta"><span>Status · {workspace.status}</span><span>Created · {new Date(workspace.createdAt).toLocaleString()}</span><span>Updated · {new Date(workspace.updatedAt).toLocaleString()}</span><span>ID · {workspace.id}</span></div></details></div>}
       {!editing && <div className="workspace-hero-actions"><button type="button" onClick={() => setEditing(true)}>Edit</button><button type="button" className="archive-button" onClick={async () => { const archived = await controller.archive(workspace.id); if (archived) onClose(); }}>Archive</button></div>}
     </header>
+    <p className="workflow-guide">Plan a Task → run a Mock Execution → preserve useful output → review Knowledge before any Obsidian save. Task planning state and Execution progress are separate.</p>
     <WorkspaceTasks workspaceId={workspace.id} />
     <ExecutionPanel key={workspace.id} workspaceId={workspace.id} />
     <OutcomePanel key={`outcomes-${workspace.id}`} workspaceId={workspace.id} />
     <KnowledgePanel key={`knowledge-${workspace.id}`} workspaceId={workspace.id} />
     <WorkspaceChats workspaceId={workspace.id} onOpen={(chat) => setOpenChatId(chat.id)} />
-    <section aria-labelledby="workspace-rooms-heading" className="workspace-rooms"><div className="section-heading"><div><p className="eyebrow">Inside this place</p><h2 id="workspace-rooms-heading">Workspace rooms</h2></div><span className="section-note">Arriving in later stages</span></div><div>{futureRooms.map((room) => <article key={room}><span aria-hidden="true">○</span><h3>{room}</h3><p>Not connected yet</p></article>)}</div></section>
   </div>;
 }

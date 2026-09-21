@@ -4,7 +4,7 @@ Local-first personal multi-agent AI workspace. The repository is being built ver
 
 ## Current status
 
-Phase 9 / Stage 13 integrates and verifies the existing Stage 0–12 closed loop across refresh, server restart and failure boundaries. Narrow repairs add retry-safe Artifact preservation, truthful repeat-save audit evidence and explicit invalid-checkpoint rejection. Stage 13 is builder-complete, awaiting Architect review and HAN acceptance; NOT PUSHED, NOT SEALED. Stages 0–12 are sealed; Stage 14 has not started. No real provider, Builder Harness or engine change is included.
+Phase 9 / Stage 14 is the **Prototype 0 release candidate**, builder-complete and awaiting Architect review and HAN acceptance; **NOT PUSHED, NOT SEALED**. It starts from sealed Stage 13 `9e29cfbc674637defd9c2d280cb2df80c09620b0`. Whole-system acceptance and truthful Normal / Advanced / Inspect presentation preserve the existing architecture, security and recovery contracts. No real provider, Builder Harness or engine change is included. Post-Prototype-0 work has not started. See [Stage 14 verification](docs/STAGE-14-VERIFICATION.md) for evidence and limitations.
 
 ## Prerequisites
 
@@ -41,7 +41,17 @@ See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for the selected stack and boun
 
 Workspaces are stored in `var/studio.sqlite` by default. Set `HAN_AI_STUDIO_DATA_DIR` to use a different local data directory. SQLite files and sidecars are ignored by Git. Workspace names do not act as identity; stable UUIDs survive rename, archive, restore, refresh, and runtime restart.
 
-GPT and Gemini have explicit deterministic Mock test bindings; real providers remain disconnected. Open a Workspace to use Prototype Executions and preserve committed contributions as formal text Artifacts. See [Stage 9 verification](docs/STAGE-9-VERIFICATION.md) for the outcome loop and [Stage 8 verification](docs/STAGE-8-VERIFICATION.md) for control/recovery limits. The global intent form remains an interface preview.
+GPT and Gemini have explicit deterministic Mock test bindings; real providers remain disconnected. Open a Workspace to use Prototype Executions and preserve committed contributions as formal text Artifacts. See [Stage 9 verification](docs/STAGE-9-VERIFICATION.md) for the outcome loop and [Stage 8 verification](docs/STAGE-8-VERIFICATION.md) for control/recovery limits.
+
+## Normal work and inspection
+
+Home leads to real saved Workspaces. Disconnected navigation, the inert global intent form, Attention/Continue Active Work claims and future-room placeholders are removed. To continue committed work after refresh, reopen its Workspace; current page selection, unsaved drafts and approvals are not restored.
+
+Create a Task, then use **Refresh Executions** to load it into **Linked Task**. Selecting a Task prefills an empty Execution goal only if its full goal fits 500 characters; longer goals need an explicit bounded summary. The normal setup summary shows GPT → Gemini, Sequential and the default pause between steps. **Create Execution** only creates a record; **Start Execution** starts work. Task planning state never automatically follows Execution progress.
+
+**Advanced: Execution setup** holds optional participant, mode and pause-policy choices. **Inspect** disclosures retain IDs, provenance, checkpoints and technical report details. Normal views keep actual status, useful output, Mock labels, failures, uncertainty, human controls, exact publication destination and approval/verification visible. Artifact kind defaults to Result and remains changeable under Advanced. These are presentation disclosures, not security boundaries or new domain modes.
+
+Home's **Advanced: Agent registry & test tools** retains the single-Agent Message form and standalone collaboration. Those outputs are temporary, not durable Task/Execution history. `HAN_AI_STUDIO_PROVIDER_MODE=none` intentionally disables new Mock invocations and Executions without hiding stored work. Reviewed Knowledge still requires current server-side permission and fresh approval.
 
 ## Integration & recovery
 

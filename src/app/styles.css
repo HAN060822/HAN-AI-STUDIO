@@ -101,3 +101,42 @@ button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visib
 .knowledge-panel [role="alert"] { color: #9a3544; }
 .governance-details { margin-top: 1rem; }
 .governance-details ol { max-height: 18rem; overflow-y: auto; padding-left: 1.5rem; }
+
+/* Prototype 0 RC: useful work first; inspection remains available without hiding safety. */
+summary { cursor: pointer; }
+summary:focus-visible { outline: 3px solid #6759d8; outline-offset: 3px; }
+.skip-link { position: fixed; top: .5rem; left: .5rem; z-index: 10; padding: .75rem 1rem; color: #fff; background: #4e437e; transform: translateY(-200%); }
+.skip-link:focus { transform: translateY(0); }
+.sidebar { align-self: flex-start; height: 100vh; }
+.sidebar-lower { color: #645c78; font-size: .75rem; line-height: 1.5; }
+.prototype-notice, .workflow-guide { color: #5c5370; line-height: 1.6; }
+.prototype-notice { max-width: 40rem; font-size: .85rem; }
+.advanced-tools { padding: 1.25rem; border: 1px solid #ddd7e9; border-radius: .8rem; background: #faf9fd; }
+.advanced-tools > summary { color: #504568; font-weight: 700; }
+.advanced-tools .section-block { margin-top: 1.75rem; }
+.inspect-details { margin-block: .85rem; padding: .75rem; border: 1px solid #ded8ee; border-radius: .6rem; background: #faf9fd; }
+.inspect-details > summary { color: #564971; font-weight: 600; }
+.inspect-details label { display: block; margin-top: .75rem; }
+.workspace-view, .workspace-view > *, .outcome-grid > *, .execution-panel article, .knowledge-panel article { min-width: 0; max-width: 100%; }
+.workspace-view, .advanced-tools, .workspace-card, .task-panel, .chat-view, .crumb { overflow-wrap: anywhere; }
+.outcome-grid { grid-template-columns: repeat(auto-fit, minmax(min(100%, 18rem), 1fr)); }
+.execution-panel select, .outcome-panel select, .knowledge-panel select { max-width: 100%; }
+.execution-list button, .knowledge-list button { min-width: 0; white-space: normal; }
+.knowledge-panel article > label { display: block; margin-block: 1rem; line-height: 1.6; }
+.knowledge-content, .collaboration-output, .artifact-content { max-width: 100%; }
+.section-heading, .workspace-view-nav, .task-panel-nav { flex-wrap: wrap; }
+.chat-list article { grid-template-columns: 2rem minmax(0, 1fr) auto; }
+.workspace-section .text-button, .workspace-tasks .text-button, .workspace-chats .text-button { min-height: 2.5rem; }
+.workspace-section small, .workspace-meta, .task-details, .section-note, .eyebrow { color: #696275; }
+button:disabled { cursor: not-allowed; }
+@media (max-width: 650px) {
+  .sidebar { height: auto; }
+  .lobby { padding: 1.5rem 1rem 3rem; }
+  .welcome h1 { font-size: 2.65rem; }
+  .execution-panel, .outcome-panel, .knowledge-panel { padding: .85rem; }
+  .execution-panel article, .knowledge-panel article { padding: .75rem; }
+  .execution-panel ol { padding-left: 1.1rem; }
+  .execution-panel fieldset, .knowledge-panel fieldset { padding: .6rem; }
+  .chat-header input { min-width: 0; width: 100%; }
+  .message-composer > div { flex-wrap: wrap; }
+}

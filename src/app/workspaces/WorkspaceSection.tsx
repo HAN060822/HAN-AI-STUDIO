@@ -46,7 +46,7 @@ export function WorkspaceSection({ controller, onOpen }: WorkspaceSectionProps) 
         <div className="composer-actions"><button type="submit" disabled={controller.saving}>{controller.saving ? 'Saving…' : 'Create'}</button><button type="button" className="quiet-button" onClick={() => { setComposerOpen(false); setValidationError(''); }}>Cancel</button></div>
       </form>}
 
-      {controller.loading ? <p className="loading-state" role="status">Loading your workspaces…</p> : active.length === 0 ? <div className="empty-state"><span className="empty-mark" aria-hidden="true">⌂</span><div><h3>Your first room is waiting.</h3><p>Create a workspace to give future projects, conversations, and your team a shared home.</p></div></div> : <div className="workspace-list" aria-live="polite">
+      {controller.loading ? <p className="loading-state" role="status">Loading your workspaces…</p> : active.length === 0 ? <div className="empty-state"><span className="empty-mark" aria-hidden="true">⌂</span><div><h3>Your first room is waiting.</h3><p>Create a workspace for Tasks, Chats, Mock Executions and reviewed outcomes.</p></div></div> : <div className="workspace-list" aria-live="polite">
         {active.map((workspace) => <article className="workspace-card" key={workspace.id}>
           <span className="workspace-mark" aria-hidden="true">✦</span>
           <div><h3>{workspace.name}</h3><p>{workspace.description || 'A persistent place, ready for its purpose.'}</p><small>Updated {new Date(workspace.updatedAt).toLocaleString()}</small></div>

@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { KnowledgePanel } from '../src/app/knowledge/KnowledgePanel';
 import type { Knowledge } from '../src/core/knowledge/knowledge';
@@ -42,6 +42,21 @@ async function prepare(sourceType = 'manual') {
 }
 afterEach(() => vi.unstubAllGlobals());
 describe('Knowledge review UI', () => {
+  it('keeps exact content, destination and required approval visible while technical identity is collapsed', async () => {
+    const f = install(); render(<KnowledgePanel workspaceId="workspace-a" />); await prepare('artifact');
+    await screen.findByRole('button', { name: 'Save Reviewed Knowledge' });
+    expect(screen.getByText('Reviewed source snapshot')).toBeVisible();
+    expect(screen.getByText('Obsidian vault: Temporary vault')).toBeVisible();
+    expect(screen.getByText(/Note path:/)).toBeVisible();
+    expect(screen.getByRole('checkbox')).toBeVisible();
+    expect(screen.getByRole('button', { name: 'Save Reviewed Knowledge' })).toBeDisabled();
+    expect(screen.getByText('Knowledge ID: knowledge-a')).not.toBeVisible();
+    fireEvent.click(screen.getByText('Inspect Knowledge provenance'));
+    expect(screen.getByText('Knowledge ID: knowledge-a')).toBeVisible();
+    expect(f.saves()).toHaveLength(0);
+    await screen.findByText('provider.openai · unavailable');
+  });
+
   it('does not export until explicit approval, shows saved path, verifies and reloads saved history', async () => {
     const f = install(); const first = render(<KnowledgePanel workspaceId="workspace-a" />);
     await prepare();
@@ -70,9 +85,36 @@ describe('Knowledge review UI', () => {
     const retry = await screen.findByRole('button', { name: 'Retry Reviewed Save' });
     expect(retry).toBeDisabled(); expect(screen.getByRole('checkbox')).not.toBeChecked();
     expect(screen.getByText('Last save failed: Disk unavailable.')).toBeInTheDocument(); expect(f.saves()).toHaveLength(1);
-    fireEvent.click(screen.getByRole('checkbox')); fireEvent.click(retry);
+    fireEvent.click(screen.getByRole('checkbox'));
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Retry Reviewed Save' })).toBeEnabled());
+    fireEvent.click(screen.getByRole('button', { name: 'Retry Reviewed Save' }));
     await screen.findByRole('button', { name: 'Verify Saved Note' }); expect(f.saves()).toHaveLength(2);
     expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+  });
+  it('does not offer stale review controls while a failed attempt loads its fresh preview', async () => {
+    const f = install({ failSaveOnce: true });
+    let holdPreview = false;
+    let releasePreview!: () => void;
+    const gate = new Promise<void>((resolve) => { releasePreview = resolve; });
+    vi.stubGlobal('fetch', vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      if (holdPreview && String(input).endsWith('/preview')) await gate;
+      return f.fetchMock(input, init);
+    }));
+    render(<KnowledgePanel workspaceId="workspace-a" />); await prepare();
+    fireEvent.click(await screen.findByRole('checkbox'));
+    holdPreview = true;
+    fireEvent.click(screen.getByRole('button', { name: 'Save Reviewed Knowledge' }));
+    await screen.findByText('Last save failed: Disk unavailable.');
+    expect(screen.getByText('Loading review and destination…')).toBeVisible();
+    expect(screen.queryByRole('checkbox')).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Retry Reviewed Save' })).not.toBeInTheDocument();
+    expect(f.saves()).toHaveLength(1);
+    await act(async () => { holdPreview = false; releasePreview(); });
+    expect(await screen.findByRole('button', { name: 'Retry Reviewed Save' })).toBeDisabled();
+    fireEvent.click(screen.getByRole('checkbox'));
+    fireEvent.click(screen.getByRole('button', { name: 'Retry Reviewed Save' }));
+    await screen.findByRole('button', { name: 'Verify Saved Note' });
+    expect(JSON.parse(String(f.saves()[1][1]?.body)).previewToken).toBe('review-1');
   });
   it('visibly blocks save when preview configuration fails without losing the candidate', async () => {
     const f = install({ previewError: true }); render(<KnowledgePanel workspaceId="workspace-a" />); await prepare();

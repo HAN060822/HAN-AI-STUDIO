@@ -49,7 +49,11 @@ export function KnowledgePanel({ workspaceId }: { workspaceId: string }) {
     return () => { active = false; };
   }, [workspaceId, record, refresh]);
 
-  function merge(next: Knowledge) { setRecords((rows) => [next, ...rows.filter((row) => row.id !== next.id)]); }
+  function merge(next: Knowledge) {
+    // Do not render a previous revision's review controls while the fresh preview loads.
+    setPreview(null); setApproved(false); setVerification('');
+    setRecords((rows) => [next, ...rows.filter((row) => row.id !== next.id)]);
+  }
   async function create(event: FormEvent) {
     event.preventDefault(); setBusy(true); setError('');
     try {
@@ -84,22 +88,22 @@ export function KnowledgePanel({ workspaceId }: { workspaceId: string }) {
       <form onSubmit={create}><fieldset disabled={busy || !!error}>
         <legend>Prepare a candidate</legend>
         <label htmlFor="knowledge-source-type">Knowledge source</label><select id="knowledge-source-type" value={sourceType} onChange={(event) => { setSourceType(event.target.value as KnowledgeSourceType); setSourceId(''); }}><option value="artifact">Artifact</option><option value="task-report">Task Report</option><option value="manual">Manual Knowledge</option></select>
-        {sourceType === 'manual' ? <><label htmlFor="knowledge-title">Knowledge title</label><input id="knowledge-title" maxLength={180} required value={title} onChange={(event) => setTitle(event.target.value)} /><label htmlFor="knowledge-content">Knowledge content</label><textarea id="knowledge-content" maxLength={100000} required value={content} onChange={(event) => setContent(event.target.value)} /></> : <><label htmlFor="knowledge-source">Selected outcome</label><select id="knowledge-source" value={chosenSource} onChange={(event) => setSourceId(event.target.value)}><option value="" disabled>Select an outcome</option>{sources.map((item) => <option value={item.id} key={item.id}>{item.title} · {item.id}</option>)}</select>{sources.length === 0 && <p>No source outcomes yet. Preserve an Artifact or generate a Task Report, then refresh Knowledge.</p>}</>}
+        {sourceType === 'manual' ? <><label htmlFor="knowledge-title">Knowledge title</label><input id="knowledge-title" maxLength={180} required value={title} onChange={(event) => setTitle(event.target.value)} /><label htmlFor="knowledge-content">Knowledge content</label><textarea id="knowledge-content" maxLength={100000} required value={content} onChange={(event) => setContent(event.target.value)} /></> : <><label htmlFor="knowledge-source">Selected outcome</label><select id="knowledge-source" value={chosenSource} onChange={(event) => setSourceId(event.target.value)}><option value="" disabled>Select an outcome</option>{sources.map((item, index) => <option value={item.id} key={item.id}>{index + 1}. {item.title}</option>)}</select>{sources.length === 0 && <p>No source outcomes yet. Preserve an Artifact or generate a Task Report, then refresh Knowledge.</p>}</>}
         <button type="submit" disabled={sourceType !== 'manual' && !chosenSource}>Prepare for Review</button>
         <p>Preparing a candidate saves it in AI Studio only. No vault file is created.</p>
       </fieldset></form>
-      <div className="knowledge-list" aria-label="Knowledge history">{records.length === 0 ? <p>No Knowledge candidates yet.</p> : records.map((item) => <button key={item.id} disabled={busy} type="button" aria-pressed={selected === item.id} onClick={() => setSelected(item.id)}>{item.title} · {item.status} · {item.id}</button>)}</div>
+      <div className="knowledge-list" aria-label="Knowledge history">{records.length === 0 ? <p>No Knowledge candidates yet.</p> : records.map((item, index) => <button key={item.id} disabled={busy} type="button" aria-pressed={selected === item.id} onClick={() => { if (selected !== item.id) { setPreview(null); setApproved(false); setVerification(''); setSelected(item.id); } }}>{index + 1}. {item.title} · {item.status}</button>)}</div>
       {record && <article aria-label="Knowledge review">
-        <h3>{record.title}</h3><p>Knowledge ID: {record.id} · Status: {record.status}</p>
-        <p>Source: {record.source.type} · {record.source.id ?? 'Manually entered'} · Task: {record.source.taskId ?? 'None'}</p>
-        <p>Created: {record.createdAt} · Updated: {record.updatedAt} · Saved: {record.savedAt ?? 'Not confirmed'}</p>
+        <h3>{record.title}</h3><p>Status: {record.status} · Source: {record.source.type}</p>
         <pre className="knowledge-content">{record.content}</pre>
         {record.failure && <p role="alert">Last save failed: {record.failure.message}</p>}
         {previewError && <p role="alert">{previewError} Candidate retained in AI Studio.</p>}
+        {!preview && !previewError && <p role="status">Loading review and destination…</p>}
         {preview && <><p>Obsidian vault: {preview.destinationLabel}</p><p>Note path: {preview.relativePath}</p><details><summary>Markdown preview</summary><pre className="knowledge-content">{preview.markdown}</pre></details>
           {record.status === 'saved' ? <><p>Saved to Obsidian. Verification reads the existing note.</p><button type="button" disabled={busy} onClick={() => void verify()}>Verify Saved Note</button></> : <><p role={preview.decision.status === 'denied' ? 'alert' : undefined}>Authority: {preview.decision.status} · {preview.decision.reason}</p><p>Saving creates this note once. Approval covers this exact content, destination and one publication attempt. Required audit evidence is recorded before the connector runs. Retry needs fresh approval and never overwrites a different note.</p><label><input type="checkbox" checked={approved} disabled={busy || preview.decision.status === 'denied'} onChange={(event) => setApproved(event.target.checked)} /> I reviewed this content and destination and approve saving to Obsidian.</label><button type="button" disabled={!approved || busy || preview.decision.status === 'denied'} onClick={() => void save()}>{record.status === 'candidate' ? 'Save Reviewed Knowledge' : 'Retry Reviewed Save'}</button></>}
         </>}
         {verification && <p role="status">{verification}</p>}
+        <details className="inspect-details"><summary>Inspect Knowledge provenance</summary><p>Knowledge ID: {record.id}</p><p>Source: {record.source.type} · {record.source.id ?? 'Manually entered'} · Task: {record.source.taskId ?? 'None'}</p><p>Created: {record.createdAt} · Updated: {record.updatedAt} · Saved: {record.savedAt ?? 'Not confirmed'}</p></details>
         <GovernanceDetails workspaceId={workspaceId} knowledgeId={record.id} refresh={`${record.revision}:${refresh}:${auditRefresh}`} />
       </article>}
     </>}

@@ -345,7 +345,7 @@ Real HTTP/SQLite restart tests, controlled fault tests and a real-browser normal
 
 ## Planned Hybrid Agent Engine Boundary (historical Stage 12 candidate; deferred)
 
-The 2026-09-18 LibreChat architecture harvest proposed the following generic engine strategy. HAN's subsequent Stage 12 Context + Usage Telemetry and Stage 13 End-to-End Integration & Recovery handoffs exclude this experiment. The direction is preserved for future authorization, not implemented or evaluated here; Stage 14 is NOT STARTED.
+The 2026-09-18 LibreChat architecture harvest proposed the following generic engine strategy. HAN's subsequent Stage 12 Context + Usage Telemetry, Stage 13 End-to-End Integration & Recovery and Stage 14 Prototype 0 Release Candidate handoffs exclude this experiment. The direction is preserved for future authorization, not implemented or evaluated here; post-Prototype-0 work is NOT STARTED.
 
 **Current implemented boundary:**
 
@@ -379,3 +379,16 @@ LibreChat is an engine candidate, not the HAN application shell. The following r
 - The existing local runtime remains authoritative until a separately authorized integration proof is implemented, verified, reviewed, and accepted. This section describes planned architecture, not current capability.
 
 The historical proposal covers an Agent invocation, controlled MCP/tool call, minimal HAN-controlled RAG retrieval, attributed context, usage, trace mapping and documented data egress. None of its engine acceptance criteria is claimed by the narrower Stage 12 implementation. Subsequent stage direction requires HAN's handoff.
+
+## Stage 14 — Prototype 0 release-candidate presentation
+
+Stage 14 changes only React presentation, UI regression tests and documentation. No application/core/server/storage/connector interface, migration, dependency, permission grant, lifecycle, runtime recovery rule or context limit changes.
+
+- Normal Home uses the existing durable Workspace list as the continuation entry. Disconnected navigation, the inert intent form and unbacked Attention/Continue Active Work/future-room placeholders are removed rather than connected to an invented aggregate model.
+- Existing Agent registry/invocation/collaboration remain reachable through a native collapsed Advanced disclosure with explicit temporary-output labeling. Workspace work still owns durable Execution history.
+- Native Advanced/Inspect disclosures move optional setup and technical identity/provenance out of the normal path. They neither grant authority nor hide failures, uncertainty, progress, Mock labels, controls, exact reviewed destination or approval requirements. No global persistent mode or new preference schema is introduced.
+- A selected Task's complete goal may prefill an empty bounded Execution goal. It does not truncate a longer Task, overwrite a human draft, mutate the Task or start an Execution. The existing explicit create/start and Task-versus-Execution boundaries remain intact.
+- Knowledge selection/record updates clear stale preview, approval and verification presentation immediately while the existing fresh-preview request runs. Loading/failure remains visible; backend freshness, one-use approval, CSRF and audit enforcement remain authoritative and unchanged.
+- Narrow layouts wrap long technical content and collapse flexible grids; keyboard users have a Skip to content link and focus-visible disclosures. This is verified targeted cleanup, not a new design system or a claim of comprehensive accessibility certification.
+
+Acceptance and retained recovery evidence are in `STAGE-14-VERIFICATION.md`. Sealed Stage 0–13 contracts remain authoritative; post-Prototype-0 work is not started.

@@ -124,7 +124,10 @@ describe('AI World Lobby', () => {
     expect(screen.getByRole('heading', { name: /your ai world/i })).toBeInTheDocument();
     expect(screen.getByRole('navigation', { name: /primary navigation/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /^home$/i })).toHaveAttribute('aria-current', 'page');
-    expect(screen.getByRole('button', { name: /workspaces/i })).toBeDisabled();
+    expect(within(screen.getByRole('navigation', { name: /primary navigation/i })).getAllByRole('button')).toHaveLength(1);
+    expect(screen.getByRole('link', { name: 'Skip to content' })).toHaveAttribute('href', '#main-content');
+    expect(screen.getByRole('heading', { name: 'GPT' })).not.toBeVisible();
+    fireEvent.click(screen.getByText('Advanced: Agent registry & test tools'));
     for (const agent of initialAgentRegistry.list()) {
       const heading = screen.getByRole('heading', { name: agent.displayName });
       expect(heading).toBeInTheDocument();
@@ -136,16 +139,19 @@ describe('AI World Lobby', () => {
     await screen.findByText(/your first room is waiting/i);
   });
 
-  it('shows an honest intent preview notice instead of executing', async () => {
+  it('removes disconnected intent, activity, attention and navigation claims from the normal path', async () => {
     render(<App />);
     await screen.findByText(/your first room is waiting/i);
-    fireEvent.change(screen.getByRole('textbox', { name: /global intent/i }), { target: { value: 'Plan a garden' } });
-    fireEvent.click(screen.getByRole('button', { name: /preview intent entry/i }));
-    expect(screen.getByText(/intent execution is not connected yet/i)).toBeInTheDocument();
+    expect(screen.queryByRole('textbox', { name: /global intent/i })).not.toBeInTheDocument();
+    expect(screen.queryByText(/Nothing needs your attention|No activity yet|Continue & Active Work|Soon/)).not.toBeInTheDocument();
+    for (const name of ['Projects', 'Library', 'Activity', 'Connections', 'Settings']) expect(screen.queryByRole('button', { name })).not.toBeInTheDocument();
+    expect(screen.getByText(/deterministic Mock output, not real AI/)).toBeVisible();
+    expect(screen.getByRole('button', { name: /create workspace/i })).toBeEnabled();
   });
 
   it('invokes the configured test Agent and labels normalized Mock output', async () => {
     render(<App />);
+    fireEvent.click(screen.getByText('Advanced: Agent registry & test tools'));
     expect(await screen.findByRole('option', { name: /gpt · mock test backend/i })).toBeInTheDocument();
     fireEvent.change(screen.getByRole('textbox', { name: /^message$/i }), { target: { value: 'Boundary proof' } });
     fireEvent.click(screen.getByRole('button', { name: /invoke test agent/i }));
@@ -162,6 +168,7 @@ describe('AI World Lobby', () => {
       return workingFetch(input, init);
     }));
     render(<App />);
+    fireEvent.click(screen.getByText('Advanced: Agent registry & test tools'));
     expect(await within(screen.getByLabelText('Agent Invocation')).findByRole('alert')).toHaveTextContent(/mock test backend could not be loaded/i);
     expect(await within(screen.getByRole('region', { name: 'Prototype Collaboration' })).findByRole('alert')).toHaveTextContent(/collaboration test Agents could not be loaded/i);
     expect(screen.getByRole('button', { name: /try again/i })).toBeInTheDocument();
@@ -198,8 +205,8 @@ describe('AI World Lobby', () => {
 
   it('renders honest empty states and persistence failures', async () => {
     render(<App />);
-    expect(screen.getByText(/nothing needs your attention/i)).toBeInTheDocument();
-    expect(screen.getByText(/your work will find you here/i)).toBeInTheDocument();
+    expect(screen.queryByText(/nothing needs your attention/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/your work will find you here/i)).not.toBeInTheDocument();
     expect(await screen.findByText(/your first room is waiting/i)).toBeInTheDocument();
     vi.stubGlobal('fetch', vi.fn(() => Promise.reject(new Error('offline'))));
     fireEvent.click(screen.getByRole('button', { name: /create workspace/i }));
@@ -282,7 +289,8 @@ describe('AI World Lobby', () => {
     const panel = taskHeading.closest('section');
     if (!panel) throw new Error('Expected Task panel.');
     expect(within(panel).getByText('Verify persistent Task state.')).toBeInTheDocument();
-    expect(within(panel).getByText(/execution is not connected/i)).toBeInTheDocument();
+    expect(within(panel).getByText(/Task planning state · separate from Execution progress/i)).toBeVisible();
+    expect(screen.queryByText('Workspace rooms')).not.toBeInTheDocument();
     fireEvent.click(within(panel).getByRole('button', { name: /discussing/i }));
     await waitFor(() => expect(within(panel).getByText('Discussing', { selector: 'dd' })).toBeInTheDocument());
     fireEvent.click(within(panel).getByRole('button', { name: /^edit$/i }));

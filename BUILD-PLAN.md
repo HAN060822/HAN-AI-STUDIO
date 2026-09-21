@@ -54,7 +54,7 @@ Add explicit capabilities, local secret references, approvals, audit events, and
 
 HAN's current Stage 12 Builder Handoff narrows this gate to the existing Mock-backed Execution → Orchestrator → Agent → Provider path: explicit bounded Context packages, metadata-only provenance, normalized honest usage, monotonic duration and append-oriented local telemetry. Unknown usage/cost remains unknown; no automatic Chat/Knowledge/vault loading. **Exit:** actual execution context and usage are inspectable after reload/restart, failures remain truthful, all Stage 1–11 regressions pass, and Architect/HAN review accepts the stage.
 
-The earlier LibreChat/EngineAdapter/MCP/RAG proof in `docs/STAGE-12-ENGINE-INTEGRATION.md` is retained as deferred planning, not a requirement or completed capability of this authorized stage. No engine adoption/rejection decision or Builder Harness change is implied. Stage 12 is sealed per HAN; Stage 13 below follows its separately authorized current handoff. Stage 14 remains a historical roadmap candidate and is NOT STARTED.
+The earlier LibreChat/EngineAdapter/MCP/RAG proof in `docs/STAGE-12-ENGINE-INTEGRATION.md` is retained as deferred planning, not a requirement or completed capability of this authorized stage. No engine adoption/rejection decision or Builder Harness change is implied. Stages 12 and 13 are sealed per HAN; Stage 14 below follows its separately authorized current handoff.
 
 ## Stage 13 — End-to-End Integration & Recovery
 
@@ -62,4 +62,6 @@ Integrate the existing Workspace/Chat/Task → Agent/Orchestrator/Execution → 
 
 ## Stage 14 — Prototype 0 Release Candidate
 
-Freeze scope; audit accessibility, privacy, dependencies, docs, install/update/backup flows, and release artifacts. If LibreChat remains selected, pin and document its version/license, reproduce the local deployment, verify data-egress/telemetry defaults, review dependency/security/update procedure, and confirm the engine remains replaceable. Reassess desktop wrapper using validated needs. **Exit:** reproducible tagged candidate with limitations and acceptance record.
+HAN's current Stage 14 handoff authorizes whole-system acceptance of sealed Stage 0–13, truthful UX cleanup, Normal versus Advanced/Inspect separation, removal or repair of disconnected navigation/Continue Active Work/placeholders, and fewer normal-path decisions. Preserve architecture, permissions/approval/audit, data, context/telemetry, idempotency and recovery. **Exit:** full regression, production build, real-browser acceptance, refresh/restart verification, scoped diff/privacy checks, updated BUILD-STATE and `docs/STAGE-14-VERIFICATION.md`, and one local commit; stop for review without pushing.
+
+This supersedes the historical Stage 14 engine/deployment/tagging experiment. No engine/provider integration, Ponytail, Jev, Builder Harness change, desktop wrapper, backup system, release tag or post-Prototype-0 feature is authorized or claimed. Release-candidate builder completion is not Architect/HAN acceptance or sealing.
