@@ -90,7 +90,14 @@ export class AgentInvocationService {
     };
     let response: ProviderResponse<unknown>;
     try { response = await adapter.execute({ agentId: agent.id, input: normalizedInput, invocationId, contextId: supplied.snapshot.id }); }
-    catch { finish('failed', 'provider_request_failed'); throw new ProviderRequestFailedError(); }
+    catch (reason) {
+      finish('failed', 'provider_request_failed');
+      if (reason instanceof Error) {
+        const match = /^OpenAI request failed safely: (insufficient_quota|invalid_api_key|model_not_found|rate_limit|provider_unavailable|provider_error)\.$/.exec(reason.message);
+        if (match) throw new AgentInvocationError(match[1], `Provider request failed safely: ${match[1]}.`);
+      }
+      throw new ProviderRequestFailedError();
+    }
     if (!response || response.agentId !== agent.id || response.providerId !== binding.providerId || response.modelId !== binding.modelId || response.mode !== mode || response.status !== 'succeeded' || typeof response.output !== 'string' || !response.output.trim()) {
       finish('failed', 'malformed_provider_response'); throw new MalformedProviderResponseError();
     }

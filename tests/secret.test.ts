@@ -21,6 +21,19 @@ describe('Server-only Secret references (dummy values only)', () => {
     expect(JSON.stringify(provider)).not.toContain(dummy); expect(JSON.stringify(provider.status())).not.toContain(dummy);
     expect(() => provider.use('UNRELATED_ENV' as 'provider.openai', () => { throw new Error('must not run'); })).toThrow(/unavailable/);
   });
+  it('accepts OPENAI_API_KEY as a compatibility alias while preferring the existing dedicated mapping', () => {
+    const alias = 'DUMMY-ONLY-openai-api-key-alias';
+    let observed = '';
+    const aliasProvider = new EnvironmentSecretProvider({ OPENAI_API_KEY: `  ${alias}  ` });
+    aliasProvider.use('provider.openai', (value) => { observed = value; });
+    expect(observed).toBe(alias);
+    expect(aliasProvider.status()).toContainEqual({ ref: 'provider.openai', status: 'configured' });
+
+    const preferred = new EnvironmentSecretProvider({ HAN_AI_STUDIO_SECRET_OPENAI: dummy, OPENAI_API_KEY: alias });
+    preferred.use('provider.openai', (value) => { observed = value; });
+    expect(observed).toBe(dummy);
+    expect(JSON.stringify(preferred)).not.toContain(alias);
+  });
   it('does not resolve or invoke when authority is absent, ungranted or missing approval', () => {
     const f = fixture(); const provider = new EnvironmentSecretProvider({ HAN_AI_STUDIO_SECRET_OPENAI: dummy }); const resolve = vi.spyOn(provider, 'use');
     const consumer = vi.fn(); const secrets = new SecretService(provider, new GovernanceService(f.governanceRepository, [grant]));

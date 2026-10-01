@@ -4,6 +4,7 @@ import { createServer, type IncomingMessage, type ServerResponse } from 'node:ht
 import { extname, join, resolve, sep } from 'node:path';
 import { URL } from 'node:url';
 import { MockProviderAdapter, MOCK_MODEL_ID } from '../adapters/mock/mockProviderAdapter.ts';
+import { DEFAULT_OPENAI_MODEL_ID, OpenAIProviderAdapter } from '../adapters/openai/openAIProviderAdapter.ts';
 import { AgentInvocationError, AgentInvocationService } from '../application/agents/agentInvocationService.ts';
 import { initialAgentRegistry } from '../application/agents/initialAgentRegistry.ts';
 import { OrchestratorService } from '../application/collaboration/orchestratorService.ts';
@@ -46,7 +47,8 @@ type StudioServerOptions = {
   port?: number;
   databasePath: string;
   dev?: boolean;
-  providerMode?: 'mock' | 'none';
+  providerMode?: 'mock' | 'openai' | 'none';
+  openaiModel?: string;
   obsidianVaultRoot?: string;
   knowledgePublication?: 'review' | 'deny';
   secretProvider?: SecretProvider;
@@ -401,13 +403,22 @@ export async function startStudioServer(options: StudioServerOptions) {
   const conversationService = new ConversationService(conversationRepository, repository);
   const taskRepository = new SqliteTaskRepository(options.databasePath);
   const taskService = new TaskService(taskRepository, repository, conversationRepository);
-  const registrations: ProviderAdapterRegistration[] = initialProviderAdapterRegistry.listDescriptors().map((descriptor) => ({ descriptor }));
+  const secrets = options.secretProvider ?? new EnvironmentSecretProvider({});
+  const openaiModel = options.openaiModel?.trim() || DEFAULT_OPENAI_MODEL_ID;
+  const openai = (options.providerMode ?? 'mock') === 'openai' && secrets.status().some(({ ref, status }) => ref === 'provider.openai' && status === 'configured')
+    ? new OpenAIProviderAdapter(secrets, openaiModel)
+    : null;
+  const registrations: ProviderAdapterRegistration[] = initialProviderAdapterRegistry.listDescriptors().map((descriptor) => openai && descriptor.id === 'openai'
+    ? { descriptor: openai.descriptor, adapter: openai }
+    : { descriptor });
   const bindings = new Map<AgentId, ProviderBinding>();
   if ((options.providerMode ?? 'mock') === 'mock') {
     const mock = new MockProviderAdapter();
     registrations.push({ descriptor: mock.descriptor, adapter: mock });
     bindings.set('agent-gpt', { providerId: 'mock', adapterId: 'mock', modelId: MOCK_MODEL_ID, status: 'configured' });
     bindings.set('agent-gemini', { providerId: 'mock', adapterId: 'mock', modelId: MOCK_MODEL_ID, status: 'configured' });
+  } else if (openai) {
+    bindings.set('agent-gpt', { providerId: 'openai', adapterId: 'openai', modelId: openaiModel, status: 'configured' });
   }
   const telemetryRepository = new SqliteTelemetryRepository(options.databasePath);
   const agentInvocationService = new AgentInvocationService(initialAgentRegistry, new ProviderAdapterRegistry(registrations), bindings, telemetryRepository);
@@ -421,7 +432,6 @@ export async function startStudioServer(options: StudioServerOptions) {
   const governance = new GovernanceService(governanceRepository, prototypeGrants(options.knowledgePublication ?? 'review'));
   const knowledge = new KnowledgeService(knowledgeRepository, repository, outcomeRepository, new ObsidianConnector(options.obsidianVaultRoot), governance);
   const authority = new LocalAuthority();
-  const secrets = options.secretProvider ?? new EnvironmentSecretProvider({});
   const server = createServer(async (request, response) => {
     const url = new URL(request.url ?? '/', `http://${request.headers.host ?? 'localhost'}`);
     const telemetryPath = url.pathname.match(/^\/api\/workspaces\/([^/]+)\/executions\/([^/]+)\/telemetry$/);

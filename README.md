@@ -4,7 +4,7 @@ Local-first personal multi-agent AI workspace. The repository is being built ver
 
 ## Current status
 
-Phase 9 / Stage 14 is the **Prototype 0 release candidate**, builder-complete and awaiting Architect review and HAN acceptance; **NOT PUSHED, NOT SEALED**. It starts from sealed Stage 13 `9e29cfbc674637defd9c2d280cb2df80c09620b0`. Whole-system acceptance and truthful Normal / Advanced / Inspect presentation preserve the existing architecture, security and recovery contracts. No real provider, Builder Harness or engine change is included. Post-Prototype-0 work has not started. See [Stage 14 verification](docs/STAGE-14-VERIFICATION.md) for evidence and limitations.
+Phase 9 / Stage 14 is the **Prototype 0 release candidate**, builder-complete and awaiting Architect review and HAN acceptance; **NOT PUSHED, NOT SEALED**. It starts from sealed Stage 13 `9e29cfbc674637defd9c2d280cb2df80c09620b0`. Whole-system acceptance and truthful Normal / Advanced / Inspect presentation preserve the existing architecture, security and recovery contracts. Stage 14 itself included no real provider, Builder Harness or engine change; the later bounded OpenAI slice described below adds only a real GPT binding. See [Stage 14 verification](docs/STAGE-14-VERIFICATION.md) for evidence and limitations.
 
 ## Prerequisites
 
@@ -41,7 +41,7 @@ See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for the selected stack and boun
 
 Workspaces are stored in `var/studio.sqlite` by default. Set `HAN_AI_STUDIO_DATA_DIR` to use a different local data directory. SQLite files and sidecars are ignored by Git. Workspace names do not act as identity; stable UUIDs survive rename, archive, restore, refresh, and runtime restart.
 
-GPT and Gemini have explicit deterministic Mock test bindings; real providers remain disconnected. Open a Workspace to use Prototype Executions and preserve committed contributions as formal text Artifacts. See [Stage 9 verification](docs/STAGE-9-VERIFICATION.md) for the outcome loop and [Stage 8 verification](docs/STAGE-8-VERIFICATION.md) for control/recovery limits.
+GPT and Gemini have explicit deterministic Mock test bindings by default. Explicit `openai` provider mode replaces only GPT's Mock binding with the real OpenAI Responses API; Gemini and Codex remain disconnected. Open a Workspace to use Prototype Executions and preserve committed contributions as formal text Artifacts. See [Stage 9 verification](docs/STAGE-9-VERIFICATION.md) for the outcome loop and [Stage 8 verification](docs/STAGE-8-VERIFICATION.md) for control/recovery limits.
 
 ## Normal work and inspection
 
@@ -51,7 +51,7 @@ Create a Task, then use **Refresh Executions** to load it into **Linked Task**. 
 
 **Advanced: Execution setup** holds optional participant, mode and pause-policy choices. **Inspect** disclosures retain IDs, provenance, checkpoints and technical report details. Normal views keep actual status, useful output, Mock labels, failures, uncertainty, human controls, exact publication destination and approval/verification visible. Artifact kind defaults to Result and remains changeable under Advanced. These are presentation disclosures, not security boundaries or new domain modes.
 
-Home's **Advanced: Agent registry & test tools** retains the single-Agent Message form and standalone collaboration. Those outputs are temporary, not durable Task/Execution history. `HAN_AI_STUDIO_PROVIDER_MODE=none` intentionally disables new Mock invocations and Executions without hiding stored work. Reviewed Knowledge still requires current server-side permission and fresh approval.
+Home's **Advanced: Agent registry & test tools** retains the single-Agent Message form and standalone collaboration. Those outputs are temporary, not durable Task/Execution history. `HAN_AI_STUDIO_PROVIDER_MODE=none` intentionally disables new provider invocations and Executions without hiding stored work. Reviewed Knowledge still requires current server-side permission and fresh approval.
 
 ## Integration & recovery
 
@@ -87,10 +87,12 @@ The existing review checkbox covers both reviewed content and authority for this
 
 Open **Advanced: authority, audit & Secret references** in Knowledge review for recent metadata-only attempt history and configured/unavailable Secret references. Pre-action audit failure prevents publication. If final audit cannot be confirmed, the UI reports uncertainty: inspect the retained record and use read-only Verify before any fresh reviewed retry. Nothing is replayed automatically.
 
-Optional server-only mappings are `HAN_AI_STUDIO_SECRET_OPENAI`, `HAN_AI_STUDIO_SECRET_GEMINI`, `HAN_AI_STUDIO_SECRET_GITHUB` and `HAN_AI_STUDIO_SECRET_ENGINE`. Do not add real keys for Stage 11. No real provider, engine, MCP tool or network egress is connected or authorized. The environment-backed Secret provider exposes status and a trusted synchronous server-consumer seam, never a value API.
+Server-only mappings are `HAN_AI_STUDIO_SECRET_OPENAI`, `HAN_AI_STUDIO_SECRET_GEMINI`, `HAN_AI_STUDIO_SECRET_GITHUB` and `HAN_AI_STUDIO_SECRET_ENGINE`. Only the bounded OpenAI adapter consumes `provider.openai`, and only in explicit `openai` mode; the other real providers, engine and MCP tool remain disconnected. The environment-backed Secret provider exposes status and a trusted synchronous server-consumer seam, never a value API.
 
 See [Stage 11 verification](docs/STAGE-11-VERIFICATION.md) for contracts, exact enforcement scope, tests, isolated-vault browser smoke, failure policy and review points. Stage 1–10 internal/Mock actions are not all retrofitted with governance; this is not a universal application sandbox.
 
 ## Environment
 
 Copy `.env.example` to `.env.local` for local overrides. Do not commit `.env.local`, credentials, provider keys, databases, or runtime artifacts. Browser-exposed variables must start with `VITE_` and must never contain secrets.
+
+To enable real GPT after installing dependencies, set `HAN_AI_STUDIO_PROVIDER_MODE=openai` and provide either `HAN_AI_STUDIO_SECRET_OPENAI` or its compatibility alias `OPENAI_API_KEY` in the server process environment, then restart. If both key variables exist, the HAN-specific variable wins. `HAN_AI_STUDIO_OPENAI_MODEL` optionally overrides the default `gpt-5.6-luna`. The key is never sent to the browser; a provider call occurs only when GPT is invoked through the existing UI/API.
